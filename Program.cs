@@ -34,7 +34,7 @@ for (; ; )
 internal class Spire
 {
     private static readonly int LevelCount = 4;
-    private static readonly int MaxTowers = 2;
+    private static readonly int MaxTowers = 3;
 
     private static readonly int ColumnCount = 5;
 
@@ -48,7 +48,7 @@ internal class Spire
     public List<Type> Pool = new()
     {
         typeof(FireTrap),
-        typeof(FrostTrap),
+        typeof(FrostTrapII),
         typeof(StrengthTower),
     };
 
@@ -60,7 +60,7 @@ internal class Spire
     private static long _mapIndex = 0;
     private static readonly long MaxMapIndex = (long)Math.Pow(3.0, LevelCount * ColumnCount);
 
-    private static int _towerTokens = 2;
+    private static int _towerTokens = 3;
 
     private static void IncrementList()
     {
@@ -157,9 +157,9 @@ internal class Spire
             {
                 foreach (var fireTrap in fireTraps)
                 {
-                    fireTrap?.Ignite();
+                    (fireTrap as FireTrap)?.Ignite();
                 }
-                tower.Ignite(fireTraps.Count);
+                (tower as StrengthTower)?.Ignite(fireTraps.Count);
             }
             foreach (var trap in level)
             {
@@ -177,8 +177,8 @@ internal class Spire
         }
 
 
-        TotalDamage = _traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage);
-        TotalDamageWithBonus = _traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage + trap.SortBonus);
+        TotalDamage = _traps.SelectMany(level => level).Sum(trap => trap.TotalDamage);
+        TotalDamageWithBonus = _traps.SelectMany(level => level).Sum(trap => trap.TotalDamage + trap.SortBonus);
     }
 
     public void Print()
@@ -186,7 +186,7 @@ internal class Spire
         _traps.Reverse();
         foreach (var level in _traps)
         {
-            foreach (Trap trap in level)
+            foreach (var trap in level)
             {
                 FormatText(trap);
                 Console.Write(trap!.Mark.ToString().PadRight(6));
@@ -316,6 +316,11 @@ internal class Spire
             Mark = 'F';
             TotalDamage = BaseDamage = 50;
         }
+        public new void Ignite(int dummy = 0)
+        {
+            DamageMultiplier = 2;
+            TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
+        }
     }
 
     internal class FrostTrap : Trap
@@ -333,9 +338,9 @@ internal class Spire
         }
     }
 
-    internal class FrostTrapIi : FrostTrap
+    internal class FrostTrapII : FrostTrap
     {
-        public FrostTrapIi()
+        public FrostTrapII()
         {
             Mark = 'I';
             TotalDamage = BaseDamage = 50;
@@ -356,6 +361,11 @@ internal class Spire
             LevelCap = 1;
             BaseDamage = 100;
             SortBonus = 0;
+        }
+        public new void Ignite(int FireTrapCount = 0)
+        {
+            DamageMultiplier = FireTrapCount;
+            TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
         }
     }
 
