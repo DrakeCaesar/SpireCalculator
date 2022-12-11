@@ -16,13 +16,16 @@ var maxDamage = 0;
 for (; ; )
 {
     var spire = new Spire();
-    if (spire.totalDamageWithBonus > maxDamage)
+    if (spire.TotalDamageWithBonus > maxDamage)
     {
-        maxDamage = spire.totalDamageWithBonus;
+        maxDamage = spire.TotalDamageWithBonus;
         //spire.print();
-        spire.printDamage();
-        spire.printDamageWithBonus();
+        spire.PrintDamage();
+        spire.PrintDamageWithBonus();
     }
+
+    if (Spire.Exhausted)
+        return 0;
 }
 
 
@@ -30,76 +33,73 @@ for (; ; )
 
 internal class Spire
 {
-    private static int levelCount = 4;
-    private static int maxTowers = 2;
+    private static readonly int LevelCount = 4;
+    private static readonly int MaxTowers = 2;
 
-    private static int columnCount = 5;
-    private int sortBonus = levelCount * columnCount + 1;
+    private static readonly int ColumnCount = 5;
 
-    private List<List<dynamic>> traps = new();
-    public int totalDamage = 0;
-    public int totalDamageWithBonus = 0;
+    private readonly List<List<Trap>> _traps = new();
+    public int TotalDamage = 0;
+    public int TotalDamageWithBonus = 0;
 
-    private static int[,] map = new int[levelCount, columnCount];
+    private static readonly int[,] Map = new int[LevelCount, ColumnCount];
+    internal static bool Exhausted = false;
 
-
-    static Random random = new();
-
-    public List<Trap> pool = new()
+    public List<Type> Pool = new()
     {
-        new FireTrapI(),
-        new FrostTrapII(),
-        new StrengthTowerI(),
+        typeof(FireTrap),
+        typeof(FrostTrap),
+        typeof(StrengthTower),
     };
 
     public Spire()
     {
-        populate();
+        Populate();
 
     }
-    private static long mapIndex = 0;
-    private static long maxMapIndex = (long)Math.Pow(3.0, levelCount * columnCount);
+    private static long _mapIndex = 0;
+    private static readonly long MaxMapIndex = (long)Math.Pow(3.0, LevelCount * ColumnCount);
 
-    private static int towerTokens = 2;
+    private static int _towerTokens = 2;
 
-    private void IncrementList()
+    private static void IncrementList()
     {
-        ++mapIndex;
+        ++_mapIndex;
         var carryover = 1;
-        for (var j = 0; j < levelCount; j++)
+        for (var j = 0; j < LevelCount; j++)
         {
             var columnHasTower = false;
 
-            for (var i = 0; i < columnCount; i++)
+            for (var i = 0; i < ColumnCount; i++)
             {
-                if (map[j, i] == 2)
+                if (Map[j, i] == 2)
                     columnHasTower = true;
             }
 
-            for (var i = 0; i < columnCount; i++)
+            for (var i = 0; i < ColumnCount; i++)
             {
-                var hadToken = map[j, i] == 2;
-                map[j, i] += carryover;
+                var hadToken = Map[j, i] == 2;
+                Map[j, i] += carryover;
                 carryover = 0;
 
-                if (map[j, i] == 3)
+                if (Map[j, i] == 3)
                 {
                     carryover = 1;
                     columnHasTower = false;
-                    map[j, i] = 0;
+                    Map[j, i] = 0;
 
-                    towerTokens = hadToken ? ++towerTokens : --towerTokens;
+                    _towerTokens = hadToken ? ++_towerTokens : --_towerTokens;
                 }
-                else if (map[j, i] == 2)
+                else if (Map[j, i] == 2)
                 {
-                    if (towerTokens > 0 && columnHasTower == false)
+                    if (_towerTokens > 0 && columnHasTower == false)
                     {
-                        --towerTokens;
+                        --_towerTokens;
                         columnHasTower = true;
                     }
-                    else if ((towerTokens == 0 || columnHasTower) && hadToken == false)
+                    else if ((_towerTokens == 0 || columnHasTower) && hadToken == false)
                     {
-                        map[j, i] = 0;
+                        Map[j, i] = 0;
                         carryover = 1;
                     }
                 }
@@ -108,58 +108,50 @@ internal class Spire
 
         if (carryover <= 0) return;
         Console.WriteLine("Tested All");
-        printMap();
+        Spire.Exhausted = true;
+        PrintMap();
     }
 
-    private void printMap()
+    private static void PrintMap()
     {
-        for (var j = 0; j < levelCount; j++)
+        for (var j = 0; j < LevelCount; j++)
         {
-            for (var i = 0; i < columnCount; i++)
+            for (var i = 0; i < ColumnCount; i++)
             {
-                Console.Write(map[j, i].ToString().PadRight(6));
+                Activator.CreateInstance<ObjectType>();
+
+                Console.Write(Map[j, i].ToString().PadRight(6));
             }
             Console.WriteLine();
         }
         Console.WriteLine();
     }
 
-    private void populate()
+    private void Populate()
     {
         IncrementList();
 
-        for (var j = 0; j < levelCount; j++)
+        for (var j = 0; j < LevelCount; j++)
         {
-            var levelPool = pool.ToList();
-            var level = new List<dynamic?>();
-            for (var i = 0; i < columnCount; i++)
+            var level = new List<Trap>();
+            for (var i = 0; i < ColumnCount; i++)
             {
-                levelPool.RemoveAll(x => x.SpireCap <= 0);
-                var chosen = levelPool[map[j, i]];
-                if (chosen is StrengthTowerI)
+                level.Add((Trap)Activator.CreateInstance(Pool[Map[j, i]])!);
+                if (level.Last() is StrengthTower)
                 {
-                    levelPool.Remove(chosen);
-                    chosen.SpireCap--;
-                }
-                var type = chosen.GetType();
-                level.Add((Trap)Activator.CreateInstance(type)!);
-                if (level.Last() is StrengthTowerI)
-                {
-                    ((level.Last() as Trap)!).sortBonus = columnCount - i;
+                    ((level.Last() as Trap)!).SortBonus = ColumnCount - i;
                 }
             }
 
-            traps.Add(level!);
+            _traps.Add(level!);
         }
-
-
 
         var freezeRounds = 0;
         var freezePower = 0;
-        foreach (var level in traps)
+        foreach (var level in _traps)
         {
-            var fireTraps = level.FindAll(x => x is FireTrapI);
-            var tower = level.Find(x => x is StrengthTowerI);
+            var fireTraps = level.FindAll(x => x is FireTrap);
+            var tower = level.Find(x => x is StrengthTower);
 
             if (tower != null)
             {
@@ -185,40 +177,40 @@ internal class Spire
         }
 
 
-        totalDamage = traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage);
-        totalDamageWithBonus = traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage + trap.sortBonus);
+        TotalDamage = _traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage);
+        TotalDamageWithBonus = _traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage + trap.SortBonus);
     }
 
-    public void print()
+    public void Print()
     {
-        traps.Reverse();
-        foreach (var level in traps)
+        _traps.Reverse();
+        foreach (var level in _traps)
         {
             foreach (Trap trap in level)
             {
-                formatText(trap);
+                FormatText(trap);
                 Console.Write(trap!.Mark.ToString().PadRight(6));
             }
 
-            formatText();
+            FormatText();
             Console.WriteLine();
         }
         Console.WriteLine();
-        traps.Reverse();
+        _traps.Reverse();
     }
 
-    public void formatText(dynamic trap)
+    public static void FormatText(dynamic trap)
     {
-        formatText();
+        FormatText();
         switch (trap)
         {
-            case FireTrapI:
+            case FireTrap:
                 Console.BackgroundColor = ConsoleColor.DarkRed;
                 break;
-            case FrostTrapI:
+            case FrostTrap:
                 Console.BackgroundColor = ConsoleColor.DarkBlue;
                 break;
-            case StrengthTowerI:
+            case StrengthTower:
                 Console.BackgroundColor = ConsoleColor.DarkYellow;
                 Console.ForegroundColor = ConsoleColor.Black;
                 break;
@@ -229,58 +221,58 @@ internal class Spire
         }
     }
 
-    public void formatText()
+    public static void FormatText()
     {
         Console.BackgroundColor = ConsoleColor.Black;
         Console.ForegroundColor = ConsoleColor.White;
     }
 
-    public void printDamage()
+    public void PrintDamage()
     {
-        traps.Reverse();
+        _traps.Reverse();
 
-        foreach (var level in traps)
+        foreach (var level in _traps)
         {
             foreach (Trap trap in level)
             {
-                formatText(trap);
+                FormatText(trap);
                 var round = trap.BaseDamage * trap.DamageMultiplier;
                 var mult = (trap.SlowMultiplier + 1);
                 Console.Write(((mult > 1 ? (mult + "x") : "") + round).PadRight(6));
             }
-            formatText();
+            FormatText();
             Console.WriteLine();
         }
 
         Console.WriteLine();
-        Console.WriteLine("Total Damage: " + totalDamage);
-        Console.WriteLine("Index:        " + mapIndex + " / " + maxMapIndex);
+        Console.WriteLine("Total Damage: " + TotalDamage);
+        Console.WriteLine("Index:        " + _mapIndex + " / " + MaxMapIndex);
         Console.WriteLine();
-        traps.Reverse();
+        _traps.Reverse();
 
     }
 
-    public void printDamageWithBonus()
+    public void PrintDamageWithBonus()
     {
-        traps.Reverse();
+        _traps.Reverse();
 
-        foreach (var level in traps)
+        foreach (var level in _traps)
         {
             foreach (Trap trap in level)
             {
-                formatText(trap);
+                FormatText(trap);
                 //Console.Write(trap.TotalDamageWithBonus.ToString().PadRight(6));
-                Console.Write((trap!.TotalDamage + trap.sortBonus).ToString().PadRight(6));
+                Console.Write((trap!.TotalDamage + trap.SortBonus).ToString().PadRight(6));
 
             }
-            formatText();
+            FormatText();
             Console.WriteLine();
         }
 
         Console.WriteLine();
-        Console.WriteLine("Total Damage: " + totalDamageWithBonus);
+        Console.WriteLine("Total Damage: " + TotalDamageWithBonus);
         Console.WriteLine();
-        traps.Reverse();
+        _traps.Reverse();
 
     }
 
@@ -291,7 +283,7 @@ internal class Spire
         public int BaseDamage = 0;
         public int DamageMultiplier = 1;
         public int SlowMultiplier = 0;
-        public int sortBonus = 0;
+        public int SortBonus = 0;
 
         public int TotalDamage = 0;
         public int ApplyFreeze = 0;
@@ -303,40 +295,32 @@ internal class Spire
         public bool Frozen;
         public bool Ignited;
 
-        public void Freeze(int FreezePower)
+        public void Freeze(int freezePower)
         {
-            if (FreezePower == 0) return;
+            if (freezePower == 0) return;
             if (Frozen) return;
-            SlowMultiplier = FreezePower;
+            SlowMultiplier = freezePower;
             TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
             Frozen = true;
         }
 
-        public void Ignite(int fireTowerCount = 0)
+        public void Ignite(int dummy = 0)
         {
-
         }
     }
 
-    internal class FireTrapI : Trap
+    internal class FireTrap : Trap
     {
-        public FireTrapI()
+        public FireTrap()
         {
             Mark = 'F';
             TotalDamage = BaseDamage = 50;
         }
-
-        public new void Ignite(int fireTowerCount = 0)
-        {
-            DamageMultiplier = 2;
-            TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
-            Ignited = true;
-        }
     }
 
-    internal class FrostTrapI : Trap
+    internal class FrostTrap : Trap
     {
-        public FrostTrapI()
+        public FrostTrap()
         {
             Mark = 'I';
             TotalDamage = BaseDamage = 10;
@@ -344,14 +328,14 @@ internal class Spire
             FreezePower = 1;
         }
 
-        public new void Freeze(int FreezePower)
+        public static new void Freeze(int freezePower)
         {
         }
     }
 
-    internal class FrostTrapII : FrostTrapI
+    internal class FrostTrapIi : FrostTrap
     {
-        public FrostTrapII()
+        public FrostTrapIi()
         {
             Mark = 'I';
             TotalDamage = BaseDamage = 50;
@@ -362,24 +346,16 @@ internal class Spire
 
 
 
-    internal class StrengthTowerI : Trap
+    internal class StrengthTower : Trap
     {
 
-        public StrengthTowerI()
+        public StrengthTower()
         {
             Mark = 'T';
-            SpireCap = maxTowers;
+            SpireCap = MaxTowers;
             LevelCap = 1;
             BaseDamage = 100;
-            sortBonus = 0;
-        }
-
-        public new void Ignite(int fireTowerCount)
-        {
-            DamageMultiplier = fireTowerCount;
-            TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
-            Ignited = true;
-
+            SortBonus = 0;
         }
     }
 
