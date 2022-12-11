@@ -128,11 +128,6 @@ internal class Spire
     {
         IncrementList();
 
-        if (mapIndex == 866)
-        {
-            var test = true;
-        }
-
         for (var j = 0; j < levelCount; j++)
         {
             var levelPool = pool.ToList();
@@ -191,11 +186,7 @@ internal class Spire
 
 
         totalDamage = traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage);
-        totalDamageWithBonus = (int)traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage + trap.sortBonus);
-        //totalDamageWithBonus = totalDamage;
-        //print();
-
-        //printDamage();
+        totalDamageWithBonus = traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage + trap.sortBonus);
     }
 
     public void print()
