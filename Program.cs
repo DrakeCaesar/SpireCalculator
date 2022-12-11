@@ -81,29 +81,14 @@ internal class Spire
                 var hadToken = map[j, i] == 2;
                 map[j, i] += carryover;
                 carryover = 0;
-                if (map[j, i] == 3)
-                {
-                    var test = true;
-                }
 
                 if (map[j, i] == 3)
                 {
-                    if (hadToken)
-                    {
-                        hadToken = false;
-                        ++towerTokens;
-                        columnHasTower = false;
-                        map[j, i] = 0;
-                        carryover = 1;
-                    }
-                    else if (columnHasTower == true)
-                    {
-                        carryover = 1;
-                        --towerTokens;
-                        columnHasTower = false;
-                        map[j, i] = 0;
-                        carryover = 1;
-                    }
+                    carryover = 1;
+                    columnHasTower = false;
+                    map[j, i] = 0;
+
+                    towerTokens = hadToken ? ++towerTokens : --towerTokens;
                 }
                 else if (map[j, i] == 2)
                 {
@@ -112,7 +97,7 @@ internal class Spire
                         --towerTokens;
                         columnHasTower = true;
                     }
-                    else if ((towerTokens == 0 || columnHasTower == true) && hadToken == false)
+                    else if ((towerTokens == 0 || columnHasTower) && hadToken == false)
                     {
                         map[j, i] = 0;
                         carryover = 1;
@@ -121,11 +106,9 @@ internal class Spire
             }
         }
 
-        if (carryover > 0)
-        {
-            Console.WriteLine("Tested All 1");
-            printMap();
-        }
+        if (carryover <= 0) return;
+        Console.WriteLine("Tested All");
+        printMap();
     }
 
     private void printMap()
