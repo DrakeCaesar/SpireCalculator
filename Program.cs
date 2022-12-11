@@ -1,16 +1,19 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Collections.Generic;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using Microsoft.VisualBasic.CompilerServices;
 using System.Reflection.Emit;
 using System.Runtime.Serialization;
 using System.Drawing;
+using static Spire;
+using System.Reflection.Metadata.Ecma335;
 
 
 var maxDamage = 0;
 
-for (;;)
+for (; ; )
 {
     var spire = new Spire();
     if (spire.totalDamageWithBonus > maxDamage)
@@ -31,11 +34,14 @@ internal class Spire
     private static int maxTowers = 2;
 
     private static int columnCount = 5;
-    private int sortBonus = levelCount * columnCount +1;
+    private int sortBonus = levelCount * columnCount + 1;
 
     private List<List<dynamic>> traps = new();
     public int totalDamage = 0;
     public int totalDamageWithBonus = 0;
+
+    private static int[,] map = new int[levelCount, columnCount];
+
 
     static Random random = new();
 
@@ -51,10 +57,99 @@ internal class Spire
         populate();
 
     }
+    private static long mapIndex = 0;
+    private static long maxMapIndex = (long)Math.Pow(3.0, levelCount * columnCount);
+
+    private static int towerTokens = 2;
+
+    private void IncrementList()
+    {
+        ++mapIndex;
+        var carryover = 1;
+        for (var j = 0; j < levelCount; j++)
+        {
+            var columnHasTower = false;
+
+            for (var i = 0; i < columnCount; i++)
+            {
+                if (map[j, i] == 2)
+                    columnHasTower = true;
+            }
+
+            for (var i = 0; i < columnCount; i++)
+            {
+                var hadToken = map[j, i] == 2;
+                map[j, i] += carryover;
+                carryover = 0;
+                if (map[j, i] == 3)
+                {
+                    var test = true;
+                }
+
+                if (map[j, i] == 3)
+                {
+                    if (hadToken)
+                    {
+                        hadToken = false;
+                        ++towerTokens;
+                        columnHasTower = false;
+                        map[j, i] = 0;
+                        carryover = 1;
+                    }
+                    else if (columnHasTower == true)
+                    {
+                        carryover = 1;
+                        --towerTokens;
+                        columnHasTower = false;
+                        map[j, i] = 0;
+                        carryover = 1;
+                    }
+                }
+                else if (map[j, i] == 2)
+                {
+                    if (towerTokens > 0 && columnHasTower == false)
+                    {
+                        --towerTokens;
+                        columnHasTower = true;
+                    }
+                    else if ((towerTokens == 0 || columnHasTower == true) && hadToken == false)
+                    {
+                        map[j, i] = 0;
+                        carryover = 1;
+                    }
+                }
+            }
+        }
+
+        if (carryover > 0)
+        {
+            Console.WriteLine("Tested All 1");
+            printMap();
+        }
+    }
+
+    private void printMap()
+    {
+        for (var j = 0; j < levelCount; j++)
+        {
+            for (var i = 0; i < columnCount; i++)
+            {
+                Console.Write(map[j, i].ToString().PadRight(6));
+            }
+            Console.WriteLine();
+        }
+        Console.WriteLine();
+    }
 
     private void populate()
     {
-        
+        IncrementList();
+
+        if (mapIndex == 866)
+        {
+            var test = true;
+        }
+
         for (var j = 0; j < levelCount; j++)
         {
             var levelPool = pool.ToList();
@@ -62,7 +157,7 @@ internal class Spire
             for (var i = 0; i < columnCount; i++)
             {
                 levelPool.RemoveAll(x => x.SpireCap <= 0);
-                var chosen = levelPool[random.Next(levelPool.Count)];
+                var chosen = levelPool[map[j, i]];
                 if (chosen is StrengthTowerI)
                 {
                     levelPool.Remove(chosen);
@@ -70,7 +165,10 @@ internal class Spire
                 }
                 var type = chosen.GetType();
                 level.Add((Trap)Activator.CreateInstance(type)!);
-                ((level.Last() as Trap)!).sortBonus = --sortBonus;
+                if (level.Last() is StrengthTowerI)
+                {
+                    ((level.Last() as Trap)!).sortBonus = columnCount - i;
+                }
             }
 
             traps.Add(level!);
@@ -110,8 +208,8 @@ internal class Spire
 
 
         totalDamage = traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage);
-        totalDamageWithBonus = (int)traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage*trap.sortBonus*0.005);
-        totalDamageWithBonus = totalDamage;
+        totalDamageWithBonus = (int)traps.SelectMany(level => level.Cast<Trap>()).Sum(trap => trap!.TotalDamage + trap.sortBonus);
+        //totalDamageWithBonus = totalDamage;
         //print();
 
         //printDamage();
@@ -182,6 +280,7 @@ internal class Spire
 
         Console.WriteLine();
         Console.WriteLine("Total Damage: " + totalDamage);
+        Console.WriteLine("Index:        " + mapIndex + " / " + maxMapIndex);
         Console.WriteLine();
         traps.Reverse();
 
@@ -197,7 +296,7 @@ internal class Spire
             {
                 formatText(trap);
                 //Console.Write(trap.TotalDamageWithBonus.ToString().PadRight(6));
-                Console.Write(((int) (trap!.TotalDamage * trap.sortBonus * 0.005)).ToString().PadRight(6));
+                Console.Write((trap!.TotalDamage + trap.sortBonus).ToString().PadRight(6));
 
             }
             formatText();
@@ -221,7 +320,6 @@ internal class Spire
         public int sortBonus = 0;
 
         public int TotalDamage = 0;
-        public int TotalDamageWithBonus = 0;
         public int ApplyFreeze = 0;
         public int FreezePower = 0;
         public char Mark;
@@ -237,7 +335,6 @@ internal class Spire
             if (Frozen) return;
             SlowMultiplier = FreezePower;
             TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
-            TotalDamageWithBonus = TotalDamage + sortBonus;
             Frozen = true;
         }
 
@@ -253,14 +350,12 @@ internal class Spire
         {
             Mark = 'F';
             TotalDamage = BaseDamage = 50;
-            TotalDamageWithBonus = TotalDamage + sortBonus;
         }
 
         public new void Ignite(int fireTowerCount = 0)
         {
             DamageMultiplier = 2;
             TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
-            TotalDamageWithBonus = TotalDamage + sortBonus;
             Ignited = true;
         }
     }
@@ -271,7 +366,6 @@ internal class Spire
         {
             Mark = 'I';
             TotalDamage = BaseDamage = 10;
-            TotalDamageWithBonus = TotalDamage + sortBonus;
             ApplyFreeze = 3;
             FreezePower = 1;
         }
@@ -287,7 +381,6 @@ internal class Spire
         {
             Mark = 'I';
             TotalDamage = BaseDamage = 50;
-            TotalDamageWithBonus = TotalDamage + sortBonus;
             ApplyFreeze = 4;
             FreezePower = 1;
         }
@@ -304,13 +397,13 @@ internal class Spire
             SpireCap = maxTowers;
             LevelCap = 1;
             BaseDamage = 100;
+            sortBonus = 0;
         }
 
         public new void Ignite(int fireTowerCount)
         {
             DamageMultiplier = fireTowerCount;
             TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
-            TotalDamageWithBonus = TotalDamage + sortBonus;
             Ignited = true;
 
         }
