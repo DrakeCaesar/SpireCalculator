@@ -1,12 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Collections.Generic;
 using System;
-using System.Linq.Expressions;
-using System.Reflection.Emit;
-using System.Runtime.Serialization;
-using System.Drawing;
 using System.Linq;
-using static Spire;
 
 
 var maxDamage = 0;
@@ -31,7 +26,7 @@ for (; ; )
 
 internal class Spire
 {
-    private static readonly int LevelCount = 4;
+    private static readonly int LevelCount = 5;
     private static readonly int MaxTowers = 2;
 
     private static readonly int ColumnCount = 5;
