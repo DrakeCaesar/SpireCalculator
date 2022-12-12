@@ -1,14 +1,12 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Collections.Generic;
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
-using Microsoft.VisualBasic.CompilerServices;
 using System.Reflection.Emit;
 using System.Runtime.Serialization;
 using System.Drawing;
+using System.Linq;
 using static Spire;
-using System.Reflection.Metadata.Ecma335;
 
 
 var maxDamage = 0;
@@ -34,7 +32,7 @@ for (; ; )
 internal class Spire
 {
     private static readonly int LevelCount = 4;
-    private static readonly int MaxTowers = 3;
+    private static readonly int MaxTowers = 2;
 
     private static readonly int ColumnCount = 5;
 
@@ -60,7 +58,7 @@ internal class Spire
     private static long _mapIndex = 0;
     private static readonly long MaxMapIndex = (long)Math.Pow(3.0, LevelCount * ColumnCount);
 
-    private static int _towerTokens = 3;
+    private static int _towerTokens = 2;
 
     private static void IncrementList()
     {
@@ -118,8 +116,6 @@ internal class Spire
         {
             for (var i = 0; i < ColumnCount; i++)
             {
-                Activator.CreateInstance<ObjectType>();
-
                 Console.Write(Map[j, i].ToString().PadRight(6));
             }
             Console.WriteLine();
