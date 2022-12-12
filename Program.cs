@@ -10,13 +10,13 @@ var maxDamage = 0;
 for (; ; )
 {
     var spire = new Spire();
-    if (spire.TotalDamageWithBonus > maxDamage)
+    if (spire.TotalDamageWithBonus >= maxDamage)
     {
         Spire.copyToBestMap();
         maxDamage = spire.TotalDamageWithBonus;
         //spire.print();
         spire.PrintDamage();
-        spire.PrintDamageWithBonus();
+        //spire.PrintDamageWithBonus();
     }
 
     if (Spire.Exhausted)
@@ -63,7 +63,7 @@ internal class Spire
     private static readonly long MaxMapIndex = (long)Math.Pow(3.0, LevelCount * ColumnCount);
 
     private static int _towerTokens = MaxTowers;
-    private static int offset = 2;
+    private static int offset = 3;
     public static int locked = 0;
 
     public static void copyToBestMap()
@@ -82,7 +82,12 @@ internal class Spire
         for (var j = 0; j <= locked - 1; j++)
             for (var i = 0; i < ColumnCount; i++)
                 Map[j, i] = bestMap[j, i];
-        //_towerTokens = bestTowerTokens;
+        var tokens = 0;
+        for (var j = 0; j < LevelCount; j++)
+            for (var i = 0; i < ColumnCount; i++)
+                if (Map[j, i] == 2)
+                    tokens++;
+        _towerTokens = tokens;
     }
 
     private static void IncrementList()
@@ -286,7 +291,7 @@ internal class Spire
 
         Console.WriteLine();
         Console.WriteLine("Total Damage: " + TotalDamage);
-        Console.WriteLine("Index:        " + _mapIndex + " / " + MaxMapIndex);
+        Console.WriteLine("Index:        " + _mapIndex);
         Console.WriteLine();
         _traps.Reverse();
 
