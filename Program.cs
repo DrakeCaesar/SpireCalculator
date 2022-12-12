@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Threading;
 
 
 var maxDamage = 0;
@@ -11,6 +12,7 @@ for (; ; )
     var spire = new Spire();
     if (spire.TotalDamageWithBonus > maxDamage)
     {
+        Spire.copyToBestMap();
         maxDamage = spire.TotalDamageWithBonus;
         //spire.print();
         spire.PrintDamage();
@@ -18,15 +20,19 @@ for (; ; )
     }
 
     if (Spire.Exhausted)
-        return 0;
+    {
+        Console.ReadLine();
+        return;
+    }
 }
+
 
 
 
 
 internal class Spire
 {
-    private static readonly int LevelCount = 5;
+    public static readonly int LevelCount = 5;
     private static readonly int MaxTowers = 2;
 
     private static readonly int ColumnCount = 5;
@@ -35,7 +41,10 @@ internal class Spire
     public int TotalDamage = 0;
     public int TotalDamageWithBonus = 0;
 
-    private static readonly int[,] Map = new int[LevelCount, ColumnCount];
+    public static int[,] Map = new int[LevelCount, ColumnCount];
+    public static int[,] bestMap = new int[LevelCount, ColumnCount];
+    public static int bestTowerTokens = 0;
+
     internal static bool Exhausted = false;
 
     public List<Type> Pool = new()
@@ -53,22 +62,62 @@ internal class Spire
     private static long _mapIndex = 0;
     private static readonly long MaxMapIndex = (long)Math.Pow(3.0, LevelCount * ColumnCount);
 
-    private static int _towerTokens = 2;
+    private static int _towerTokens = MaxTowers;
+    private static int offset = 2;
+    public static int locked = 0;
+
+    public static void copyToBestMap()
+    {
+        
+        for (var j = 0; j < LevelCount; j++)   
+            for (var i = 0; i<ColumnCount; i++)
+                bestMap[j, i] = Map[j, i];
+        bestTowerTokens = _towerTokens;
+
+
+    }
+
+    public static void copyToMap()
+    {
+        for (var j = 0; j <= locked - 1; j++)
+            for (var i = 0; i < ColumnCount; i++)
+                Map[j, i] = bestMap[j, i];
+        //_towerTokens = bestTowerTokens;
+    }
 
     private static void IncrementList()
     {
+
+         
         ++_mapIndex;
+
+
+        
         var carryover = 1;
-        for (var j = 0; j < LevelCount; j++)
+        
+        for (var j = locked; j < LevelCount; j++)
         {
+            if (j == 4 && carryover == 1)
+            {
+                var bug = true;
+            }
+
             var columnHasTower = false;
+            if (j > offset  && carryover == 1)
+            {
+                if (j - offset > locked)
+                {
+
+                    locked = j - offset;
+                    copyToMap();
+                }
+            }
 
             for (var i = 0; i < ColumnCount; i++)
             {
                 if (Map[j, i] == 2)
                     columnHasTower = true;
             }
-
             for (var i = 0; i < ColumnCount; i++)
             {
                 var hadToken = Map[j, i] == 2;
