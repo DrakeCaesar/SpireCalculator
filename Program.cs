@@ -1,9 +1,10 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿#define FireTower
+
+// See https://aka.ms/new-console-template for more information
 using System.Collections.Generic;
 using System;
+using System.IO;
 using System.Linq;
-using System.Threading;
-
 
 var maxDamage = 0;
 
@@ -12,16 +13,14 @@ for (; ; )
     var spire = new Spire();
     if (spire.TotalDamageWithBonus >= maxDamage)
     {
-        Spire.copyToBestMap();
+        Spire.CopyToBestMap();
         maxDamage = spire.TotalDamageWithBonus;
-        //spire.print();
         spire.PrintDamage();
-        //spire.PrintDamageWithBonus();
     }
 
     if (Spire.Exhausted)
     {
-        Console.ReadLine();
+        File.WriteAllText("../WriteLines.txt", Spire.text);
         return;
     }
 }
@@ -42,10 +41,12 @@ internal class Spire
     public int TotalDamageWithBonus = 0;
 
     public static byte[,] Map = new byte[LevelCount, ColumnCount];
-    public static byte[,] bestMap = new byte[LevelCount, ColumnCount];
-    public static int bestTowerTokens = 0;
+    public static byte[,] BestMap = new byte[LevelCount, ColumnCount];
+    public static int BestTowerTokens = 0;
 
     internal static bool Exhausted = false;
+    public static string text = string.Empty;
+
 
     public List<Type> Pool = new()
     {
@@ -61,27 +62,27 @@ internal class Spire
     }
     private static long _mapIndex = 0;
     private static int _towerTokens = MaxTowers;
-    private static int offset = 2;
-    public static int locked = 0;
+    private const int Offset = 2;
+    public static int Locked = 0;
 
-    public static void copyToBestMap()
+    public static void CopyToBestMap()
     {
         
         for (var j = 0; j < LevelCount; j++)   
             for (var i = 0; i<ColumnCount; i++)
-                bestMap[j, i] = Map[j, i];
-        bestTowerTokens = _towerTokens;
+                BestMap[j, i] = Map[j, i];
+        BestTowerTokens = _towerTokens;
 
 
     }
 
-    public static void copyToMap()
+    public static void CopyToMap()
     {
         _towerTokens = 0;
         for (var j = 0; j < LevelCount; j++)
             for (var i = 0; i < ColumnCount; i++)
             {
-                Map[j, i] = (byte)(j < locked ? bestMap[j, i] : 0);
+                Map[j, i] = (byte)(j < Locked ? BestMap[j, i] : 0);
                 if (Map[j, i] == 2) 
                     ++_towerTokens;
             }
@@ -97,22 +98,16 @@ internal class Spire
 
         byte carryover = 1;
         
-        for (var j = locked; j < LevelCount; j++)
+        for (var j = Locked; j < LevelCount; j++)
         {
-
-            if (j == 4 && carryover == 1)
-            {
-                var bug = true;
-            }
-
             var columnHasTower = false;
-            if (j > offset  && carryover == 1)
+            if (j > Offset  && carryover == 1)
             {
-                if (j - offset > locked)
+                if (j - Offset > Locked)
                 {
 
-                    locked = j - offset;
-                    copyToMap();
+                    Locked = j - Offset;
+                    CopyToMap();
                 }
             }
 
@@ -148,6 +143,8 @@ internal class Spire
                         carryover = 1;
                     }
                 }
+                if (carryover == 0)
+                    return;
             }
         }
 
@@ -281,7 +278,7 @@ internal class Spire
                 FormatText(trap);
                 var round = trap.BaseDamage * trap.DamageMultiplier;
                 var mult = (trap.SlowMultiplier + 1);
-                Console.Write(((mult > 1 ? (mult + "x") : "") + round).PadLeft(7));
+                Console.Write(((mult > 1 ? (mult + "x") : "").PadRight(8-round.ToString().Length) + round).PadLeft(5));
             }
             FormatText();
             Console.WriteLine();
@@ -291,6 +288,11 @@ internal class Spire
         Console.WriteLine("Total Damage: " + TotalDamage);
         Console.WriteLine("Index:        " + _mapIndex);
         Console.WriteLine();
+        text += "\n";
+        text += "Total Damage: " + TotalDamage + "\n";
+        text += "Index:        " + _mapIndex + "\n";
+        text += "\n";
+
         _traps.Reverse();
 
     }
@@ -421,10 +423,10 @@ internal class Spire
             BaseDamage = 50;
             SortBonus = 0;
         }
-        public new void Ignite(int FireTrapCount = 0, int FireTrapDamage = 0)
+        public new void Ignite(int fireTrapCount = 0, int fireTrapDamage = 0)
         {
-            BaseDamage = FireTrapDamage * 2;
-            DamageMultiplier = FireTrapCount;
+            BaseDamage = fireTrapDamage * 2;
+            DamageMultiplier = fireTrapCount;
             TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
         }
     }
