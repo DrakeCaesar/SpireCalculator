@@ -77,20 +77,14 @@ internal class Spire
 
     public static void copyToMap()
     {
-        for (var j = 0; j < locked; j++)
-            for (var i = 0; i < ColumnCount; i++)
-                Map[j, i] = bestMap[j, i];
-
-        for (var j = locked; j < LevelCount; j++)
-            for (var i = 0; i < ColumnCount; i++)
-                Map[j, i] = 0;
-
-        var tokens = 0;
+        _towerTokens = 0;
         for (var j = 0; j < LevelCount; j++)
             for (var i = 0; i < ColumnCount; i++)
-                if (Map[j, i] == 2)
-                    tokens++;
-        _towerTokens = tokens;
+            {
+                Map[j, i] = (byte)(j < locked ? bestMap[j, i] : 0);
+                if (Map[j, i] == 2) 
+                    ++_towerTokens;
+            }
     }
 
     private static void IncrementList()
@@ -143,19 +137,12 @@ internal class Spire
                 }
                 else if (Map[j, i] == 2)
                 {
-
-                    var previousHasTower = false;
-                    if (j != 0)
-                        for (var k = 0; k < ColumnCount; k++)
-                            if (Map[j - 1, k] == 2)
-                                previousHasTower = true;
-
-                    if (_towerTokens > 0 && columnHasTower == false && !previousHasTower)
+                    if (_towerTokens > 0 && columnHasTower == false && j % 2 == 1)
                     {
                         --_towerTokens;
                         columnHasTower = true;
                     }
-                    else if ((_towerTokens == 0 || columnHasTower || previousHasTower) && hadToken == false)
+                    else if ((_towerTokens == 0 || columnHasTower || j % 2 == 0) && hadToken == false)
                     {
                         Map[j, i] = 0;
                         carryover = 1;
