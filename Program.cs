@@ -15,7 +15,7 @@ for (; ; )
     {
         Spire.CopyToBestMap();
         maxDamage = spire.TotalDamageWithBonus;
-        spire.PrintDamage();
+        spire.PrintDamageToFile();
     }
 
     if (Spire.Exhausted)
@@ -24,10 +24,6 @@ for (; ; )
         return;
     }
 }
-
-
-
-
 
 internal class Spire
 {
@@ -72,8 +68,6 @@ internal class Spire
             for (var i = 0; i<ColumnCount; i++)
                 BestMap[j, i] = Map[j, i];
         BestTowerTokens = _towerTokens;
-
-
     }
 
     public static void CopyToMap()
@@ -90,12 +84,7 @@ internal class Spire
 
     private static void IncrementList()
     {
-
-         
         ++_mapIndex;
-
-
-
         byte carryover = 1;
         
         for (var j = Locked; j < LevelCount; j++)
@@ -152,18 +141,7 @@ internal class Spire
         Spire.Exhausted = true;
     }
 
-    private static void PrintMap()
-    {
-        for (var j = 0; j < LevelCount; j++)
-        {
-            for (var i = 0; i < ColumnCount; i++)
-            {
-                Console.Write(Map[j, i].ToString().PadLeft(7));
-            }
-            Console.WriteLine();
-        }
-        Console.WriteLine();
-    }
+
 
     private void Populate()
     {
@@ -186,19 +164,28 @@ internal class Spire
 
         var freezeRounds = 0;
         var freezePower = 0;
-        foreach (var level in _traps)
+        for (var j = 0; j < _traps.Count; j++)
         {
-            var fireTraps = level.FindAll(x => x is FireTrap);
-            var tower = level.Find(x => x is StrengthTower);
-
-            if (tower != null && fireTraps.Count > 0)
+            var level = _traps[j];
+            var fireTraps = 0;
+            var tower = -1;
+            for (var i = 0; i < level.Count; i++)
             {
-                foreach (var fireTrap in fireTraps)
+                if (tower == -1 && Map[j, i] == 2)
+                    tower = i;
+                if (Map[j, i] == 0)
                 {
-                    (fireTrap as FireTrap)?.Ignite();
+                    if (tower == -1)
+                        break;
+                    fireTraps++;
+                    ((FireTrapII)_traps[j][i]).Ignite();
                 }
-                (tower as StrengthTower)?.Ignite(fireTraps.Count , fireTraps.First().BaseDamage);
+                if (tower == -1)
+                    break;
+                if (i == level.Count - 1 && tower != -1 && fireTraps != 0)
+                    ((StrengthTower)_traps[j][tower]).Ignite(fireTraps, new FireTrapII().BaseDamage);
             }
+
             foreach (var trap in level)
             {
                 if (trap.ApplyFreeze > 0)
@@ -213,29 +200,11 @@ internal class Spire
                 }
             }
         }
-
-
         TotalDamage = _traps.SelectMany(level => level).Sum(trap => trap.TotalDamage);
         TotalDamageWithBonus = _traps.SelectMany(level => level).Sum(trap => trap.TotalDamage + trap.SortBonus);
     }
 
-    public void Print()
-    {
-        _traps.Reverse();
-        foreach (var level in _traps)
-        {
-            foreach (var trap in level)
-            {
-                FormatText(trap);
-                Console.Write(trap!.Mark.ToString().PadLeft(7));
-            }
 
-            FormatText();
-            Console.WriteLine();
-        }
-        Console.WriteLine();
-        _traps.Reverse();
-    }
 
     public static void FormatText(dynamic trap)
     {
@@ -265,7 +234,7 @@ internal class Spire
         Console.ForegroundColor = ConsoleColor.White;
     }
 
-    public void PrintDamage()
+    public void PrintDamageToFile()
     {
         _traps.Reverse();
 
@@ -273,47 +242,23 @@ internal class Spire
         {
             foreach (var trap in level)
             {
-                FormatText(trap);
+                //FormatText(trap);
                 var round = trap.BaseDamage * trap.DamageMultiplier;
                 var mult = (trap.SlowMultiplier + 1);
                 var formattedWord = " " + (((mult > 1 ? (mult + "x") : "")).PadRight(3) + (round + " ").PadLeft(5));
-                Console.Write(formattedWord);
+                //Console.Write(formattedWord);
                 text += formattedWord;
 
 
             }
-            FormatText();
-            Console.WriteLine();
+            //FormatText();
+            //Console.WriteLine();
             text += "\n";
         }
 
         var damageOutput = $"\nTotal Damage: {TotalDamage}\nIndex:        {_mapIndex}\n\n";
-        Console.Write(damageOutput);
+        //Console.Write(damageOutput);
         text += damageOutput;
-        _traps.Reverse();
-
-    }
-
-    public void PrintDamageWithBonus()
-    {
-        _traps.Reverse();
-
-        foreach (var level in _traps)
-        {
-            foreach (Trap trap in level)
-            {
-                FormatText(trap);
-                //Console.Write(trap.TotalDamageWithBonus.ToString().PadLeft(7));
-                Console.Write((trap!.TotalDamage + trap.SortBonus).ToString().PadLeft(7));
-
-            }
-            FormatText();
-            Console.WriteLine();
-        }
-
-        Console.WriteLine();
-        Console.WriteLine("Total Damage: " + TotalDamageWithBonus);
-        Console.WriteLine();
         _traps.Reverse();
 
     }
@@ -346,7 +291,7 @@ internal class Spire
             Frozen = true;
         }
 
-        public void Ignite(int dummy = 0)
+        public void Ignite(int dummy = 0, int dummy1 = 0)
         {
         }
     }
@@ -428,5 +373,63 @@ internal class Spire
         }
     }
 
+    #region unused
+
+    public void PrintDamageWithBonus()
+    {
+        _traps.Reverse();
+
+        foreach (var level in _traps)
+        {
+            foreach (Trap trap in level)
+            {
+                FormatText(trap);
+                //Console.Write(trap.TotalDamageWithBonus.ToString().PadLeft(7));
+                Console.Write((trap!.TotalDamage + trap.SortBonus).ToString().PadLeft(7));
+
+            }
+            FormatText();
+            Console.WriteLine();
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Total Damage: " + TotalDamageWithBonus);
+        Console.WriteLine();
+        _traps.Reverse();
+
+    }
+
+    public void Print()
+    {
+        _traps.Reverse();
+        foreach (var level in _traps)
+        {
+            foreach (var trap in level)
+            {
+                FormatText(trap);
+                Console.Write(trap!.Mark.ToString().PadLeft(7));
+            }
+
+            FormatText();
+            Console.WriteLine();
+        }
+        Console.WriteLine();
+        _traps.Reverse();
+    }
+
+    private static void PrintMap()
+    {
+        for (var j = 0; j < LevelCount; j++)
+        {
+            for (var i = 0; i < ColumnCount; i++)
+            {
+                Console.Write(Map[j, i].ToString().PadLeft(7));
+            }
+            Console.WriteLine();
+        }
+        Console.WriteLine();
+    }
+
+    #endregion  
 }
 
