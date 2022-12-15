@@ -20,7 +20,7 @@ for (; ; )
 
     if (Spire.Exhausted)
     {
-        File.WriteAllText("../WriteLines.txt", Spire.text);
+        File.WriteAllText("../../../output.txt", Spire.text);
         return;
     }
 }
@@ -278,21 +278,20 @@ internal class Spire
                 FormatText(trap);
                 var round = trap.BaseDamage * trap.DamageMultiplier;
                 var mult = (trap.SlowMultiplier + 1);
-                Console.Write(((mult > 1 ? (mult + "x") : "").PadRight(8-round.ToString().Length) + round).PadLeft(5));
+                var formattedWord = " " + (((mult > 1 ? (mult + "x") : "")).PadRight(3) + (round + " ").PadLeft(5));
+                Console.Write(formattedWord);
+                text += formattedWord;
+
+
             }
             FormatText();
             Console.WriteLine();
+            text += "\n";
         }
 
-        Console.WriteLine();
-        Console.WriteLine("Total Damage: " + TotalDamage);
-        Console.WriteLine("Index:        " + _mapIndex);
-        Console.WriteLine();
-        text += "\n";
-        text += "Total Damage: " + TotalDamage + "\n";
-        text += "Index:        " + _mapIndex + "\n";
-        text += "\n";
-
+        var damageOutput = $"\nTotal Damage: {TotalDamage}\nIndex:        {_mapIndex}\n\n";
+        Console.Write(damageOutput);
+        text += damageOutput;
         _traps.Reverse();
 
     }
