@@ -6,7 +6,7 @@ using System.IO;
 using System.Text;
 
 var maxDamage = 0;
-var debug = true;
+var debug = false;
 
 
 for (; ; )
@@ -16,16 +16,17 @@ for (; ; )
     {
         Spire.CopyToBestMap();
         maxDamage = spire.TotalDamage;
-        spire.PrintDamageToConsole();
+        if (debug)
+            spire.PrintDamageToConsole();
     }
 
     if (debug)
     {
         spire.PrintDamageToFile();
-        if (Spire._mapIndex % 1000 == 0)
-        {
-            Console.WriteLine(Spire._mapIndex);
-        }
+        //if (Spire._mapIndex % 1000 == 0)
+        //{
+        //    Console.WriteLine(Spire._mapIndex);
+        //}
     }
 
     if (Spire.Exhausted)
@@ -181,15 +182,14 @@ internal class Spire
             1 => new FrostTrapII(),
             2 => new StrengthTower(),
             _ => Traps[j, i]
-            
         };
     }
 
     private void Populate()
     {
         if (_mapIndex == 0)
-        for (var j = 0; j < LevelCount; j++)
-            for (var i = 0; i < ColumnCount; i++)
+            for (var j = 0; j < LevelCount; j++)
+                for (var i = 0; i < ColumnCount; i++)
                     Build(j, i);
         IncrementList();
         var freezeRounds = 0;
@@ -206,7 +206,8 @@ internal class Spire
                     tower = i;
                 if (Map[j, i] == 0)
                 {
-                    if (tower == -1){
+                    if (tower == -1)
+                    {
                         for (var k = 0; k < ColumnCount; k++)
                             Traps[j, k].DamageMultiplier = 1;
                         break;
