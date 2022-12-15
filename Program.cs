@@ -187,14 +187,10 @@ internal class Spire
 
     private void Populate()
     {
-
+        if (_mapIndex == 0)
         for (var j = 0; j < LevelCount; j++)
             for (var i = 0; i < ColumnCount; i++)
-            {
-                if (_mapIndex == 0)
                     Build(j, i);
-                Traps[j, i].DamageMultiplier = 1;
-            }
         IncrementList();
         var freezeRounds = 0;
         var freezePower = 0;
@@ -210,8 +206,11 @@ internal class Spire
                     tower = i;
                 if (Map[j, i] == 0)
                 {
-                    if (tower == -1)
+                    if (tower == -1){
+                        for (var k = 0; k < ColumnCount; k++)
+                            Traps[j, k].DamageMultiplier = 1;
                         break;
+                    }
                     fireTraps++;
                     ((FireTrapII)Traps[j, i]).Ignite();
                 }
