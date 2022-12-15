@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 
 var maxDamage = 0;
+var debug = false;
+
 
 for (; ; )
 {
@@ -18,13 +20,16 @@ for (; ; )
         maxDamage = spire.TotalDamage;
         //spire.PrintDamageToConsole();
     }
-    spire.PrintDamageToFile();
+    if (debug)
+        spire.PrintDamageToFile();
 
     if (Spire.Exhausted)
     {
+        if (!debug)
+            return;
         var expectedOutput = File.ReadAllText("../../../expectedOutput.txt");
         File.WriteAllText("../../../output.txt", Spire.text.ToString());
-        if (expectedOutput != Spire.text.ToString() )
+        if (!expectedOutput.Equals(Spire.text.ToString()))
         {
             Console.WriteLine("Output has changed.");
             Console.ReadLine();
@@ -49,14 +54,6 @@ internal class Spire
 
     internal static bool Exhausted;
     public static StringBuilder text = new StringBuilder();
-
-
-    public List<Type> Pool = new()
-    {
-        typeof(FireTrapII),
-        typeof(FrostTrapII),
-        typeof(StrengthTower),
-    };
 
     public Spire()
     {
@@ -217,8 +214,6 @@ internal class Spire
                     Traps[j, i]?.Freeze(freezePower);
                     freezeRounds = Math.Max(--freezeRounds, 0);
                 }
-                if (_mapIndex >= 1505)
-                Traps[j, i].TotalDamage = Traps[j, i].BaseDamage * (Traps[j, i].SlowMultiplier + 1) * Traps[j, i].DamageMultiplier;
                 TotalDamage += Traps[j, i].TotalDamage;
             }
         }
