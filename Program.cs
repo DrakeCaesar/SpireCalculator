@@ -1,8 +1,8 @@
 ﻿#define FireTower
 
 // See https://aka.ms/new-console-template for more information
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -20,7 +20,13 @@ for (; ; )
 
     if (Spire.Exhausted)
     {
+        var expectedOutput = File.ReadAllText("../../../expectedOutput.txt");
         File.WriteAllText("../../../output.txt", Spire.text);
+        if (expectedOutput != Spire.text )
+        {
+            Console.WriteLine("Output has changed.");
+            Console.ReadLine();
+        }
         return;
     }
 }
@@ -33,14 +39,14 @@ internal class Spire
     private static readonly int ColumnCount = 5;
 
     private readonly List<List<Trap>> _traps = new();
-    public int TotalDamage = 0;
-    public int TotalDamageWithBonus = 0;
+    public int TotalDamage;
+    public int TotalDamageWithBonus;
 
     public static byte[,] Map = new byte[LevelCount, ColumnCount];
     public static byte[,] BestMap = new byte[LevelCount, ColumnCount];
-    public static int BestTowerTokens = 0;
+    public static int BestTowerTokens;
 
-    internal static bool Exhausted = false;
+    internal static bool Exhausted;
     public static string text = string.Empty;
 
 
@@ -56,10 +62,10 @@ internal class Spire
         Populate();
 
     }
-    private static long _mapIndex = 0;
+    private static long _mapIndex;
     private static int _towerTokens = MaxTowers;
     private const int Offset = 2;
-    public static int Locked = 0;
+    public static int Locked;
 
     public static void CopyToBestMap()
     {
@@ -138,7 +144,7 @@ internal class Spire
             }
         }
 
-        Spire.Exhausted = true;
+        Exhausted = true;
     }
 
 
@@ -155,7 +161,7 @@ internal class Spire
                 level.Add((Trap)Activator.CreateInstance(Pool[Map[j, i]])!);
                 if (level.Last() is StrengthTower)
                 {
-                    ((level.Last() as Trap)!).SortBonus = ColumnCount - i;
+                    (level.Last()!).SortBonus = ColumnCount - i;
                 }
             }
 
@@ -265,22 +271,19 @@ internal class Spire
 
     internal class Trap
     {
-        public int SpireCap = int.MaxValue;
-        public int LevelCap = int.MaxValue;
-        public int BaseDamage = 0;
+        public static int SpireCap = int.MaxValue;
+        public static int LevelCap = int.MaxValue;
+        public int BaseDamage;
         public int DamageMultiplier = 1;
-        public int SlowMultiplier = 0;
-        public int SortBonus = 0;
+        public int SlowMultiplier;
+        public int SortBonus;
 
-        public int TotalDamage = 0;
-        public int ApplyFreeze = 0;
-        public int FreezePower = 0;
+        public int TotalDamage;
+        public int ApplyFreeze;
+        public int FreezePower;
         public char Mark;
 
-
-
         public bool Frozen;
-        public bool Ignited;
 
         public void Freeze(int freezePower)
         {
@@ -303,7 +306,7 @@ internal class Spire
             Mark = 'F';
             TotalDamage = BaseDamage = 50;
         }
-        public new void Ignite(int dummy = 0)
+        public void Ignite(int dummy = 0)
         {
             DamageMultiplier = 2;
             TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
