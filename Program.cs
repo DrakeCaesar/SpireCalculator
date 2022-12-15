@@ -38,7 +38,7 @@ internal class Spire
 
     private static readonly int ColumnCount = 5;
 
-    private readonly List<List<Trap>> _traps = new();
+    private readonly Trap[,] _traps = new Trap[LevelCount, ColumnCount];
     public int TotalDamage;
 
     public static byte[,] Map = new byte[LevelCount, ColumnCount];
@@ -153,26 +153,24 @@ internal class Spire
         IncrementList();
 
         for (var j = 0; j < LevelCount; j++)
-        {
-            var level = new List<Trap>();
             for (var i = 0; i < ColumnCount; i++)
-            {
-                level.Add((Trap)Activator.CreateInstance(Pool[Map[j, i]])!);
-            }
-
-            _traps.Add(level!);
-        }
+                _traps[j, i] = Map[j, i] switch
+                {
+                    0 => new FireTrapII(),
+                    1 => new FrostTrapII(),
+                    2 => new StrengthTower(),
+                    _ => _traps[j, i]
+                };
 
         var freezeRounds = 0;
         var freezePower = 0;
         TotalDamage = 0;
 
-        for (var j = 0; j < _traps.Count; j++)
+        for (var j = 0; j < LevelCount; j++)
         {
-            var level = _traps[j];
             var fireTraps = 0;
             var tower = -1;
-            for (var i = 0; i < level.Count; i++)
+            for (var i = 0; i < ColumnCount; i++)
             {
                 if (tower == -1 && Map[j, i] == 2)
                     tower = i;
@@ -181,17 +179,17 @@ internal class Spire
                     if (tower == -1)
                         break;
                     fireTraps++;
-                    ((FireTrapII)_traps[j][i]).Ignite();
+                    ((FireTrapII)_traps[j,i]).Ignite();
                 }
                 if (tower == -1)
                     break;
-                if (i == level.Count - 1 && tower != -1 && fireTraps != 0)
-                    ((StrengthTower)_traps[j][tower]).Ignite(fireTraps, new FireTrapII().BaseDamage);
+                if (i == ColumnCount - 1 && tower != -1 && fireTraps != 0)
+                    ((StrengthTower)_traps[j,tower]).Ignite(fireTraps, new FireTrapII().BaseDamage);
             }
 
-            for (var i = 0; i < level.Count; i++)
+            for (var i = 0; i < ColumnCount; i++)
             {
-                var trap = level[i];
+                var trap = _traps[j,i];
                 if (trap.ApplyFreeze > 0)
                 {
                     freezeRounds = Math.Max(freezeRounds, trap!.ApplyFreeze);
@@ -202,7 +200,7 @@ internal class Spire
                     trap?.Freeze(freezePower);
                     freezeRounds = Math.Max(--freezeRounds, 0);
                 }
-                TotalDamage += _traps[j][i].TotalDamage;
+                TotalDamage += _traps[j, i].TotalDamage;
             }
         }
     }
@@ -239,21 +237,19 @@ internal class Spire
 
     public void PrintDamageToFile()
     {
-        _traps.Reverse();
 
-        foreach (var level in _traps)
+        for (var j = LevelCount - 1; j >= 0 ; j--)
         {
-            foreach (var trap in level)
+            for (var i = 0; i < ColumnCount; i++)
             {
                 //FormatText(trap);
-                var round = trap.BaseDamage * trap.DamageMultiplier;
-                var mult = (trap.SlowMultiplier + 1);
+                var round = _traps[j,i].BaseDamage * _traps[j, i].DamageMultiplier;
+                var mult = (_traps[j, i].SlowMultiplier + 1);
                 var formattedWord = " " + (((mult > 1 ? (mult + "x") : "")).PadRight(3) + (round + " ").PadLeft(5));
                 //Console.Write(formattedWord);
                 text += formattedWord;
-
-
             }
+
             //FormatText();
             //Console.WriteLine();
             text += "\n";
@@ -262,7 +258,6 @@ internal class Spire
         var damageOutput = $"\nTotal Damage: {TotalDamage}\nIndex:        {_mapIndex}\n\n";
         //Console.Write(damageOutput);
         text += damageOutput;
-        _traps.Reverse();
 
     }
 
@@ -370,40 +365,5 @@ internal class Spire
             TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
         }
     }
-
-    #region unused
-
-    public void Print()
-    {
-        _traps.Reverse();
-        foreach (var level in _traps)
-        {
-            foreach (var trap in level)
-            {
-                FormatText(trap);
-                Console.Write(trap!.Mark.ToString().PadLeft(7));
-            }
-
-            FormatText();
-            Console.WriteLine();
-        }
-        Console.WriteLine();
-        _traps.Reverse();
-    }
-
-    private static void PrintMap()
-    {
-        for (var j = 0; j < LevelCount; j++)
-        {
-            for (var i = 0; i < ColumnCount; i++)
-            {
-                Console.Write(Map[j, i].ToString().PadLeft(7));
-            }
-            Console.WriteLine();
-        }
-        Console.WriteLine();
-    }
-
-    #endregion  
 }
 
