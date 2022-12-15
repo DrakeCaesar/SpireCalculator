@@ -2,13 +2,11 @@
 
 // See https://aka.ms/new-console-template for more information
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 var maxDamage = 0;
-var debug = false;
+var debug = true;
 
 
 for (; ; )
@@ -18,13 +16,22 @@ for (; ; )
     {
         Spire.CopyToBestMap();
         maxDamage = spire.TotalDamage;
-        //spire.PrintDamageToConsole();
+        spire.PrintDamageToConsole();
     }
+
     if (debug)
+    {
         spire.PrintDamageToFile();
+        if (Spire._mapIndex % 1000 == 0)
+        {
+            Console.WriteLine(Spire._mapIndex);
+        }
+    }
 
     if (Spire.Exhausted)
     {
+        //Console.ReadLine();
+
         if (!debug)
             return;
         var expectedOutput = File.ReadAllText("../../../expectedOutput.txt");
@@ -77,16 +84,16 @@ internal class Spire
     {
         _towerTokens = 0;
         for (var j = 0; j < LevelCount; j++)
-        for (var i = 0; i < ColumnCount; i++)
-        {
-            if (j < Locked)
+            for (var i = 0; i < ColumnCount; i++)
             {
-                Map[j, i] = BestMap[j, i];
-                Build(j, i);
+                if (j < Locked)
+                {
+                    Map[j, i] = BestMap[j, i];
+                    Build(j, i);
+                }
+                if (Map[j, i] == 2)
+                    ++_towerTokens;
             }
-            if (Map[j, i] == 2)
-                ++_towerTokens;
-        }
     }
 
     private void IncrementList()
@@ -126,7 +133,22 @@ internal class Spire
                     Map[j, i] = 0;
                     _towerTokens = hadToken ? ++_towerTokens : --_towerTokens;
                 }
-                else if (Map[j, i] == 2)
+                else if (Map[j, i] == 1)
+                {
+                    bool allowed = false;
+                    if (j == 0 && i == 0)
+                        allowed = true;
+                    else if (j == 0 && Map[0, i - 1] != 1)
+                        allowed = true;
+                    else if (i == 0 && Map[j - 1, ColumnCount - 1] != 1)
+                        allowed = true;
+                    else if (i != 0 && Map[j, i - 1] != 1)
+                        allowed = true;
+
+                    if (!allowed)
+                        Map[j, i]++;
+                }
+                if (Map[j, i] == 2)
                 {
                     var optimalTowerPlacement = (i == 0 || Map[j, i - 1] != 0) && j % 2 == 1;
                     if (_towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
