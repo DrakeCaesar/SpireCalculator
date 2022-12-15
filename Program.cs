@@ -132,12 +132,13 @@ internal class Spire
                 }
                 else if (Map[j, i] == 2)
                 {
-                    if (_towerTokens > 0 && columnHasTower == false && j % 2 == 1)
+                    var optimalTowerPlacement = (i == 0 || Map[j, i - 1] != 0) && j % 2 == 1; 
+                    if (_towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
                     {
                         --_towerTokens;
                         columnHasTower = true;
                     }
-                    else if ((_towerTokens == 0 || columnHasTower || j % 2 == 0) && hadToken == false)
+                    else if ((_towerTokens == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
                     {
                         Map[j, i] = 0;
                         carryover = 1;
@@ -148,10 +149,7 @@ internal class Spire
             }
         }
 
-        if (carryover <= 0) return;
-        Console.WriteLine("Tested All");
         Spire.Exhausted = true;
-        PrintMap();
     }
 
     private static void PrintMap()
@@ -273,7 +271,7 @@ internal class Spire
 
         foreach (var level in _traps)
         {
-            foreach (Trap trap in level)
+            foreach (var trap in level)
             {
                 FormatText(trap);
                 var round = trap.BaseDamage * trap.DamageMultiplier;
