@@ -11,10 +11,10 @@ var maxDamage = 0;
 for (; ; )
 {
     var spire = new Spire();
-    if (spire.TotalDamageWithBonus >= maxDamage)
+    if (spire.TotalDamage >= maxDamage)
     {
         Spire.CopyToBestMap();
-        maxDamage = spire.TotalDamageWithBonus;
+        maxDamage = spire.TotalDamage;
         spire.PrintDamageToFile();
     }
 
@@ -40,7 +40,6 @@ internal class Spire
 
     private readonly List<List<Trap>> _traps = new();
     public int TotalDamage;
-    public int TotalDamageWithBonus;
 
     public static byte[,] Map = new byte[LevelCount, ColumnCount];
     public static byte[,] BestMap = new byte[LevelCount, ColumnCount];
@@ -159,10 +158,6 @@ internal class Spire
             for (var i = 0; i < ColumnCount; i++)
             {
                 level.Add((Trap)Activator.CreateInstance(Pool[Map[j, i]])!);
-                if (level.Last() is StrengthTower)
-                {
-                    (level.Last()!).SortBonus = ColumnCount - i;
-                }
             }
 
             _traps.Add(level!);
@@ -170,6 +165,8 @@ internal class Spire
 
         var freezeRounds = 0;
         var freezePower = 0;
+        TotalDamage = 0;
+
         for (var j = 0; j < _traps.Count; j++)
         {
             var level = _traps[j];
@@ -192,8 +189,9 @@ internal class Spire
                     ((StrengthTower)_traps[j][tower]).Ignite(fireTraps, new FireTrapII().BaseDamage);
             }
 
-            foreach (var trap in level)
+            for (var i = 0; i < level.Count; i++)
             {
+                var trap = level[i];
                 if (trap.ApplyFreeze > 0)
                 {
                     freezeRounds = Math.Max(freezeRounds, trap!.ApplyFreeze);
@@ -204,10 +202,9 @@ internal class Spire
                     trap?.Freeze(freezePower);
                     freezeRounds = Math.Max(--freezeRounds, 0);
                 }
+                TotalDamage += _traps[j][i].TotalDamage;
             }
         }
-        TotalDamage = _traps.SelectMany(level => level).Sum(trap => trap.TotalDamage);
-        TotalDamageWithBonus = _traps.SelectMany(level => level).Sum(trap => trap.TotalDamage + trap.SortBonus);
     }
 
 
@@ -276,7 +273,6 @@ internal class Spire
         public int BaseDamage;
         public int DamageMultiplier = 1;
         public int SlowMultiplier;
-        public int SortBonus;
 
         public int TotalDamage;
         public int ApplyFreeze;
@@ -366,7 +362,6 @@ internal class Spire
             SpireCap = MaxTowers;
             LevelCap = 1;
             BaseDamage = 50;
-            SortBonus = 0;
         }
         public new void Ignite(int fireTrapCount = 0, int fireTrapDamage = 0)
         {
@@ -377,30 +372,6 @@ internal class Spire
     }
 
     #region unused
-
-    public void PrintDamageWithBonus()
-    {
-        _traps.Reverse();
-
-        foreach (var level in _traps)
-        {
-            foreach (Trap trap in level)
-            {
-                FormatText(trap);
-                //Console.Write(trap.TotalDamageWithBonus.ToString().PadLeft(7));
-                Console.Write((trap!.TotalDamage + trap.SortBonus).ToString().PadLeft(7));
-
-            }
-            FormatText();
-            Console.WriteLine();
-        }
-
-        Console.WriteLine();
-        Console.WriteLine("Total Damage: " + TotalDamageWithBonus);
-        Console.WriteLine();
-        _traps.Reverse();
-
-    }
 
     public void Print()
     {
