@@ -16,6 +16,7 @@ for (; ; )
     {
         Spire.CopyToBestMap();
         maxDamage = spire.TotalDamage;
+        //spire.PrintDamageToConsole();
     }
     spire.PrintDamageToFile();
 
@@ -39,7 +40,7 @@ internal class Spire
 
     private static readonly int ColumnCount = 5;
 
-    private readonly Trap[,] _traps = new Trap[LevelCount, ColumnCount];
+    private static readonly Trap[,] Traps = new Trap[LevelCount, ColumnCount];
     public int TotalDamage;
 
     public static byte[,] Map = new byte[LevelCount, ColumnCount];
@@ -60,43 +61,46 @@ internal class Spire
     public Spire()
     {
         Populate();
-
     }
-    private static long _mapIndex;
+
+    public static long _mapIndex;
     private static int _towerTokens = MaxTowers;
     private const int Offset = 2;
     public static int Locked;
 
     public static void CopyToBestMap()
     {
-        
-        for (var j = 0; j < LevelCount; j++)   
-            for (var i = 0; i<ColumnCount; i++)
+        for (var j = 0; j < LevelCount; j++)
+            for (var i = 0; i < ColumnCount; i++)
                 BestMap[j, i] = Map[j, i];
         BestTowerTokens = _towerTokens;
     }
 
-    public static void CopyToMap()
+    public void CopyToMap()
     {
         _towerTokens = 0;
         for (var j = 0; j < LevelCount; j++)
-            for (var i = 0; i < ColumnCount; i++)
+        for (var i = 0; i < ColumnCount; i++)
+        {
+            if (j < Locked)
             {
-                Map[j, i] = (byte)(j < Locked ? BestMap[j, i] : 0);
-                if (Map[j, i] == 2) 
-                    ++_towerTokens;
+                Map[j, i] = BestMap[j, i];
+                Build(j, i);
             }
+            if (Map[j, i] == 2)
+                ++_towerTokens;
+        }
     }
 
-    private static void IncrementList()
+    private void IncrementList()
     {
         ++_mapIndex;
         byte carryover = 1;
-        
+
         for (var j = Locked; j < LevelCount; j++)
         {
             var columnHasTower = false;
-            if (j > Offset  && carryover == 1)
+            if (j > Offset && carryover == 1)
             {
                 if (j - Offset > Locked)
                 {
@@ -113,6 +117,7 @@ internal class Spire
             }
             for (var i = 0; i < ColumnCount; i++)
             {
+                var oldTower = Map[j, i];
                 var hadToken = Map[j, i] == 2;
                 Map[j, i] += carryover;
                 carryover = 0;
@@ -122,12 +127,11 @@ internal class Spire
                     carryover = 1;
                     columnHasTower = false;
                     Map[j, i] = 0;
-
                     _towerTokens = hadToken ? ++_towerTokens : --_towerTokens;
                 }
                 else if (Map[j, i] == 2)
                 {
-                    var optimalTowerPlacement = (i == 0 || Map[j, i - 1] != 0) && j % 2 == 1; 
+                    var optimalTowerPlacement = (i == 0 || Map[j, i - 1] != 0) && j % 2 == 1;
                     if (_towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
                     {
                         --_towerTokens;
@@ -139,6 +143,8 @@ internal class Spire
                         carryover = 1;
                     }
                 }
+                if (oldTower != Map[j, i])
+                    Build(j, i);
                 if (carryover == 0)
                     return;
             }
@@ -148,21 +154,29 @@ internal class Spire
     }
 
 
+    private void Build(int j, int i)
+    {
+        Traps[j, i] = Map[j, i] switch
+        {
+            0 => new FireTrapII(),
+            1 => new FrostTrapII(),
+            2 => new StrengthTower(),
+            _ => Traps[j, i]
+            
+        };
+    }
 
     private void Populate()
     {
-        IncrementList();
 
         for (var j = 0; j < LevelCount; j++)
             for (var i = 0; i < ColumnCount; i++)
-                _traps[j, i] = Map[j, i] switch
-                {
-                    0 => new FireTrapII(),
-                    1 => new FrostTrapII(),
-                    2 => new StrengthTower(),
-                    _ => _traps[j, i]
-                };
-
+            {
+                if (_mapIndex == 0)
+                    Build(j, i);
+                Traps[j, i].DamageMultiplier = 1;
+            }
+        IncrementList();
         var freezeRounds = 0;
         var freezePower = 0;
         TotalDamage = 0;
@@ -180,53 +194,53 @@ internal class Spire
                     if (tower == -1)
                         break;
                     fireTraps++;
-                    ((FireTrapII)_traps[j,i]).Ignite();
+                    ((FireTrapII)Traps[j, i]).Ignite();
                 }
                 if (tower == -1)
                     break;
-                if (i == ColumnCount - 1 && tower != -1 && fireTraps != 0)
-                    ((StrengthTower)_traps[j,tower]).Ignite(fireTraps, new FireTrapII().BaseDamage);
+                if (i == ColumnCount - 1 && fireTraps != 0)
+                    ((StrengthTower)Traps[j, tower]).Ignite(fireTraps, new FireTrapII().BaseDamage);
             }
 
             for (var i = 0; i < ColumnCount; i++)
             {
-                var trap = _traps[j,i];
-                if (trap.ApplyFreeze > 0)
+
+                Traps[j, i].Freeze(0);
+
+                if (Traps[j, i].ApplyFreeze > 0)
                 {
-                    freezeRounds = Math.Max(freezeRounds, trap!.ApplyFreeze);
-                    freezePower = trap!.FreezePower;
+                    freezeRounds = Math.Max(freezeRounds, Traps[j, i]!.ApplyFreeze);
+                    freezePower = Traps[j, i]!.FreezePower;
                 }
                 else if (freezeRounds > 0)
                 {
-                    trap?.Freeze(freezePower);
+                    Traps[j, i]?.Freeze(freezePower);
                     freezeRounds = Math.Max(--freezeRounds, 0);
                 }
-                TotalDamage += _traps[j, i].TotalDamage;
+                if (_mapIndex >= 1505)
+                Traps[j, i].TotalDamage = Traps[j, i].BaseDamage * (Traps[j, i].SlowMultiplier + 1) * Traps[j, i].DamageMultiplier;
+                TotalDamage += Traps[j, i].TotalDamage;
             }
         }
     }
 
 
 
-    public static void FormatText(dynamic trap)
+    public static void FormatText(int trap)
     {
         FormatText();
         switch (trap)
         {
-            case FireTrap:
+            case 0:
                 Console.BackgroundColor = ConsoleColor.DarkRed;
                 break;
-            case FrostTrap:
+            case 1:
                 Console.BackgroundColor = ConsoleColor.DarkBlue;
                 break;
-            case StrengthTower:
+            case 2:
                 Console.BackgroundColor = ConsoleColor.DarkYellow;
                 Console.ForegroundColor = ConsoleColor.Black;
                 break;
-        }
-        if (trap.Frozen)
-        {
-            //Console.ForegroundColor = ConsoleColor.DarkCyan;
         }
     }
 
@@ -239,27 +253,44 @@ internal class Spire
     public void PrintDamageToFile()
     {
 
-        for (var j = LevelCount - 1; j >= 0 ; j--)
+        for (var j = LevelCount - 1; j >= 0; j--)
         {
             for (var i = 0; i < ColumnCount; i++)
             {
-                //FormatText(trap);
-                var round = _traps[j,i].BaseDamage * _traps[j, i].DamageMultiplier;
-                var mult = (_traps[j, i].SlowMultiplier + 1);
+                var round = Traps[j, i].BaseDamage * Traps[j, i].DamageMultiplier;
+                var mult = (Traps[j, i].SlowMultiplier + 1);
                 var formattedWord = " " + (((mult > 1 ? (mult + "x") : "")).PadRight(3) + (round + " ").PadLeft(5));
-                //Console.Write(formattedWord);
                 text.Append(formattedWord);
             }
 
-            //FormatText();
-            //Console.WriteLine();
             text.Append("\n");
-
         }
 
         var damageOutput = $"\nTotal Damage: {TotalDamage}\nIndex:        {_mapIndex}\n\n";
-        //Console.Write(damageOutput);
         text.Append(damageOutput);
+
+    }
+
+    public void PrintDamageToConsole()
+    {
+
+        for (var j = LevelCount - 1; j >= 0; j--)
+        {
+            for (var i = 0; i < ColumnCount; i++)
+            {
+                FormatText(Map[j, i]);
+                var round = Traps[j, i].BaseDamage * Traps[j, i].DamageMultiplier;
+                var mult = (Traps[j, i].SlowMultiplier + 1);
+                var formattedWord = " " + (((mult > 1 ? (mult + "x") : "")).PadRight(3) + (round + " ").PadLeft(5));
+                Console.Write(formattedWord);
+            }
+
+            FormatText();
+            Console.WriteLine();
+        }
+
+        var damageOutput = $"\nTotal Damage: {TotalDamage}\nIndex:        {_mapIndex}\n\n";
+        Console.Write(damageOutput);
     }
 
     internal class Trap
@@ -279,11 +310,18 @@ internal class Spire
 
         public void Freeze(int freezePower)
         {
-            if (freezePower == 0) return;
-            if (Frozen) return;
-            SlowMultiplier = freezePower;
-            TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
-            Frozen = true;
+            if (freezePower == 0)
+            {
+                SlowMultiplier = freezePower;
+                TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
+                Frozen = false;
+            }
+            else
+            {
+                SlowMultiplier = freezePower;
+                TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
+                Frozen = true;
+            }
         }
 
         public void Ignite(int dummy = 0, int dummy1 = 0)
@@ -316,9 +354,9 @@ internal class Spire
 
         {
             DamageMultiplier = 2;
-            TotalDamage = BaseDamage* (SlowMultiplier + 1) * DamageMultiplier;
+            TotalDamage = BaseDamage * (SlowMultiplier + 1) * DamageMultiplier;
         }
-}
+    }
 
     internal class FrostTrap : Trap
     {
