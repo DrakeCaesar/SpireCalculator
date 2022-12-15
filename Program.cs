@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 var maxDamage = 0;
 
@@ -15,14 +16,14 @@ for (; ; )
     {
         Spire.CopyToBestMap();
         maxDamage = spire.TotalDamage;
-        spire.PrintDamageToFile();
     }
+    spire.PrintDamageToFile();
 
     if (Spire.Exhausted)
     {
         var expectedOutput = File.ReadAllText("../../../expectedOutput.txt");
-        File.WriteAllText("../../../output.txt", Spire.text);
-        if (expectedOutput != Spire.text )
+        File.WriteAllText("../../../output.txt", Spire.text.ToString());
+        if (expectedOutput != Spire.text.ToString() )
         {
             Console.WriteLine("Output has changed.");
             Console.ReadLine();
@@ -46,7 +47,7 @@ internal class Spire
     public static int BestTowerTokens;
 
     internal static bool Exhausted;
-    public static string text = string.Empty;
+    public static StringBuilder text = new StringBuilder();
 
 
     public List<Type> Pool = new()
@@ -247,18 +248,18 @@ internal class Spire
                 var mult = (_traps[j, i].SlowMultiplier + 1);
                 var formattedWord = " " + (((mult > 1 ? (mult + "x") : "")).PadRight(3) + (round + " ").PadLeft(5));
                 //Console.Write(formattedWord);
-                text += formattedWord;
+                text.Append(formattedWord);
             }
 
             //FormatText();
             //Console.WriteLine();
-            text += "\n";
+            text.Append("\n");
+
         }
 
         var damageOutput = $"\nTotal Damage: {TotalDamage}\nIndex:        {_mapIndex}\n\n";
         //Console.Write(damageOutput);
-        text += damageOutput;
-
+        text.Append(damageOutput);
     }
 
     internal class Trap
