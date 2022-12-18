@@ -130,11 +130,11 @@ struct StrengthTowerI : Trap
 
 
 
-static const int LevelCount = 6;
+static const int LevelCount = 7;
 static const int MaxTowers = 2;
 static const int ColumnCount = 5;
-static int _towerTokens = 2;
-static long _mapIndex = 0;
+static int towerTokens = MaxTowers;
+static long mapIndex = 0;
 static bool Exhausted = false;
 static int Locked = 0;
 static uint8_t Map[LevelCount][ColumnCount];
@@ -189,7 +189,7 @@ struct Spire
 
 	void CopyToMap()
 	{
-		_towerTokens = MaxTowers;
+		towerTokens = MaxTowers;
 		for (int j = 0; j < LevelCount; j++)
 			for (int i = 0; i < ColumnCount; i++)
 			{
@@ -199,13 +199,13 @@ struct Spire
 					Build(j, i);
 				}
 				if (Map[j][i] == 2)
-					--_towerTokens;
+					--towerTokens;
 			}
 	}
 
 	void IncrementList()
 	{
-		++_mapIndex;
+		++mapIndex;
 		uint8_t carryover = 1;
 
 		for (int j = Locked; j < LevelCount; j++)
@@ -239,7 +239,7 @@ struct Spire
 					carryover = 1;
 					columnHasTower = false;
 					Map[j][i] = 0;
-					_towerTokens = hadToken ? ++_towerTokens : --_towerTokens;
+					towerTokens = hadToken ? ++towerTokens : --towerTokens;
 				}
 				else if (Map[j][i] == 1)
 				{
@@ -259,12 +259,12 @@ struct Spire
 				if (Map[j][i] == 2)
 				{
 					bool optimalTowerPlacement = (i == 0 || Map[j][i - 1] != 0) && j % 2 == 1;
-					if (_towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
+					if (towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
 					{
-						--_towerTokens;
+						--towerTokens;
 						columnHasTower = true;
 					}
-					else if ((_towerTokens == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
+					else if ((towerTokens == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
 					{
 						Map[j][i] = 0;
 						carryover = 1;
@@ -302,7 +302,7 @@ struct Spire
 
 	void Populate()
 	{
-		if (_mapIndex == 0)
+		if (mapIndex == 0)
 			for (int j = 0; j < LevelCount; j++)
 				for (int i = 0; i < ColumnCount; i++)
 					Build(j, i);
@@ -403,7 +403,8 @@ struct Spire
 			text << std::endl;
 		}
 
-		auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(_mapIndex) + "\n\n";
+		auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+			mapIndex) + "\n\n";
 		text << damageOutput;
 
 	}
@@ -441,7 +442,8 @@ struct Spire
 			std::cout << std::endl;
 		}
 
-		auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(_mapIndex) + "\n\n";
+		auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+			mapIndex) + "\n\n";
 		std::cout << damageOutput;
 	}
 
