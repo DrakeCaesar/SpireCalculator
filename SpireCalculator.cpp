@@ -1,6 +1,3 @@
-// SpireCalculatorC++.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 // ReSharper disable CppInconsistentNaming
 #include <iostream>
 #include <sstream>
@@ -19,8 +16,8 @@ struct Trap
 	char Mark = ' ';
 
 	bool Frozen = false;
-	void (*Ignite)(Trap*, int, int);
-	void (*Freeze)(Trap*, int);
+	void (*Ignite)(Trap*, int, int) = nullptr;
+	void (*Freeze)(Trap*, int) = nullptr;
 };
 
 
@@ -45,7 +42,7 @@ void IgniteStrengthTowerI(Trap* trap, int dummy = 0, int dummy1 = 0)
 	trap->TotalDamage = trap->BaseDamage * (trap->SlowMultiplier + 1) * trap->DamageMultiplier;
 }
 
-void FreezeCell(Trap* trap, int freezePower)
+void FreezeCell(Trap* trap, const int freezePower)
 {
 	if (freezePower == 0)
 	{
@@ -130,9 +127,13 @@ struct StrengthTowerI : Trap
 
 
 
-static const int LevelCount = 7;
-static const int MaxTowers = 2;
-static const int ColumnCount = 5;
+constexpr bool output = true;
+constexpr bool debug = false;
+
+static constexpr int LevelCount = 7;
+static constexpr int MaxTowers = 2;
+static constexpr int ColumnCount = 5;
+static constexpr int Offset = 4;
 static int towerTokens = MaxTowers;
 static long mapIndex = 0;
 static bool Exhausted = false;
@@ -150,7 +151,7 @@ static uint8_t DebugMap[LevelCount][ColumnCount] =
 };
 
 static Trap Traps[LevelCount][ColumnCount];
-static std::stringstream text;
+static std::stringstream outputString;
 
 
 struct Spire
@@ -161,8 +162,6 @@ struct Spire
 	{
 		Populate();
 	}
-
-	const static int Offset = 4;
 
 	static void CopyToBestMap()
 	{
@@ -187,7 +186,7 @@ struct Spire
 		return true;
 	}
 
-	void CopyToMap()
+	static void CopyToMap()
 	{
 		towerTokens = MaxTowers;
 		for (int j = 0; j < LevelCount; j++)
@@ -203,7 +202,7 @@ struct Spire
 			}
 	}
 
-	void IncrementList()
+	static void IncrementList()
 	{
 		++mapIndex;
 		uint8_t carryover = 1;
@@ -229,8 +228,8 @@ struct Spire
 			}
 			for (int i = 0; i < ColumnCount; i++)
 			{
-				uint8_t oldTower = Map[j][i];
-				uint8_t hadToken = Map[j][i] == 2;
+				const uint8_t oldTower = Map[j][i];
+				const uint8_t hadToken = Map[j][i] == 2;
 				Map[j][i] += carryover;
 				carryover = 0;
 
@@ -241,24 +240,16 @@ struct Spire
 					Map[j][i] = 0;
 					towerTokens = hadToken ? ++towerTokens : --towerTokens;
 				}
-				else if (Map[j][i] == 1)
-				{
-					bool allowed = false;
-					if (j == 0 && i == 0)
-						allowed = true;
-					else if (j == 0 && Map[0][i - 1] != 1)
-						allowed = true;
-					else if (i == 0 && Map[j - 1][ColumnCount - 1] != 1)
-						allowed = true;
-					else if (i != 0 && Map[j][i - 1] != 1)
-						allowed = true;
-
-					if (!allowed)
-						Map[j][i]++;
-				}
+				else if
+					(Map[j][i] == 1 && 
+					(j != 0 || i != 0) && 
+					(j != 0 || Map[0][i - 1] == 1) && 
+					(i != 0 || Map[j - 1][ColumnCount - 1] == 1) && 
+					(i == 0 || Map[j][i - 1] == 1))
+						++Map[j][i];
 				if (Map[j][i] == 2)
 				{
-					bool optimalTowerPlacement = (i == 0 || Map[j][i - 1] != 0) && j % 2 == 1;
+					const bool optimalTowerPlacement = (i == 0 || Map[j][i - 1] != 0) && j % 2 == 1;
 					if (towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
 					{
 						--towerTokens;
@@ -281,7 +272,7 @@ struct Spire
 	}
 
 
-	void Build(int j, int i)
+	static void Build(const int j, const int i)
 	{
 		switch (Map[j][i])
 		{
@@ -295,7 +286,6 @@ struct Spire
 			Traps[j][i] = StrengthTowerI();
 			break;
 		default:
-			Traps[j][i] = Traps[j][i];
 			break;
 		}
 	}
@@ -357,7 +347,7 @@ struct Spire
 		}
 	}
 
-	static void FormatText(int trap)
+	static void FormatText(const int trap)
 	{
 		FormatText();
 		switch (trap)
@@ -377,6 +367,9 @@ struct Spire
 			//Console.BackgroundColor = ConsoleColor.DarkYellow;
 			//Console.ForegroundColor = ConsoleColor.Black;
 			break;
+		default:
+			std::cout << "\x1b[39;49m";
+			break;
 		}
 	}
 
@@ -387,36 +380,36 @@ struct Spire
 		//Console.ForegroundColor = ConsoleColor.White;
 	}
 
-	void PrintDamageToFile()
+	void PrintDamageToFile() const
 	{
 
 		for (int j = LevelCount - 1; j >= 0; j--)
 		{
 			for (int i = 0; i < ColumnCount; i++)
 			{
-				auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
-				auto mult = (Traps[j][i].SlowMultiplier + 1);
-				auto formattedWord = " " + (padRight((mult > 1 ? (std::to_string(mult) + "x") : ""), 3) + padLeft(std::to_string(round) + " ", 5));
-				text << formattedWord;
+				const auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
+				const auto multiplier = Traps[j][i].SlowMultiplier + 1;
+				auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
+				outputString << formattedWord;
 			}
 
-			text << std::endl;
+			outputString << std::endl;
 		}
 
-		auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+		const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
 			mapIndex) + "\n\n";
-		text << damageOutput;
+		outputString << damageOutput;
 
 	}
 
-	std::string padLeft(std::string str, int n)
+	static std::string padLeft(std::string str, const unsigned long long n)
 	{
 		if (n <= str.size())
 			return str;
 		str.insert(0, n - str.size(), ' '); return str;
 	}
 
-	std::string padRight(std::string str, int n)
+	static std::string padRight(std::string str, const unsigned long long n)
 	{
 		if (n <= str.size())
 			return str;
@@ -424,7 +417,7 @@ struct Spire
 		return str;
 	}
 
-	void PrintDamageToConsole()
+	void PrintDamageToConsole() const
 	{
 
 		for (int j = LevelCount - 1; j >= 0; j--)
@@ -432,9 +425,9 @@ struct Spire
 			for (int i = 0; i < ColumnCount; i++)
 			{
 				FormatText(Map[j][i]);
-				auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
-				auto mult = (Traps[j][i].SlowMultiplier + 1);
-				auto formattedWord = " " + padRight(((mult > 1 ? (std::to_string(mult) + "x") : "")), 3) + padRight(std::to_string(round) + " ", 5);
+				const auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
+				const auto multiplier = Traps[j][i].SlowMultiplier + 1;
+				auto formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
 				std::cout << formattedWord;
 			}
 
@@ -456,10 +449,6 @@ int main()
 	// See https://aka.ms/new-console-template for more information
 
 	int maxDamage = 0;
-
-	bool output = true;
-	bool debug = false;
-
 
 	for (; ; )
 	{
@@ -488,7 +477,7 @@ int main()
 			if (!debug)
 				return 0;
 
-			const auto actualOutput = text.str();
+			const std::string actualOutput = outputString.str();
 			std::ofstream ofFile("output.txt");
 			ofFile << actualOutput;
 
@@ -500,7 +489,7 @@ int main()
 			if (expectedOutput != actualOutput)
 			{
 				std::cout << "Output has changed.\n";
-				std::cin;
+				std::cin;  // NOLINT(clang-diagnostic-unused-value)
 				return 1;
 			}
 			return 0;
