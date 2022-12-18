@@ -139,6 +139,16 @@ static bool Exhausted = false;
 static int Locked = 0;
 static uint8_t Map[LevelCount][ColumnCount];
 static uint8_t BestMap[LevelCount][ColumnCount];
+static uint8_t DebugMap[LevelCount][ColumnCount] =
+{
+	{1,0,0,0,1},
+	{2,0,0,0,0},
+	{1,0,0,0,1},
+	{2,0,0,0,0},
+	{1,0,0,0,0},
+	{1,0,0,0,0}
+};
+
 static Trap Traps[LevelCount][ColumnCount];
 static std::stringstream text;
 
@@ -152,7 +162,7 @@ struct Spire
 		Populate();
 	}
 
-	const static int Offset = 3;
+	const static int Offset = 4;
 
 	static void CopyToBestMap()
 	{
@@ -161,9 +171,25 @@ struct Spire
 				BestMap[j][i] = Map[j][i];
 	}
 
+	static bool CompareMap()
+	{
+		static int closest = 0;
+		int points = 0;
+		for (int j = 0; j < LevelCount; j++)
+			for (int i = 0; i < ColumnCount; i++)
+			{
+				if (DebugMap[j][i] != Map[j][i])
+					return false;
+				++points;
+				if (points > closest && Locked == 1)
+					closest = points;
+			}
+		return true;
+	}
+
 	void CopyToMap()
 	{
-		_towerTokens = 0;
+		_towerTokens = MaxTowers;
 		for (int j = 0; j < LevelCount; j++)
 			for (int i = 0; i < ColumnCount; i++)
 			{
@@ -173,19 +199,13 @@ struct Spire
 					Build(j, i);
 				}
 				if (Map[j][i] == 2)
-					++_towerTokens;
+					--_towerTokens;
 			}
 	}
 
 	void IncrementList()
 	{
 		++_mapIndex;
-
-		if (_mapIndex == 64)
-		{
-			bool test = true;
-		}
-
 		uint8_t carryover = 1;
 
 		for (int j = Locked; j < LevelCount; j++)
@@ -198,6 +218,7 @@ struct Spire
 
 					Locked = j - Offset;
 					CopyToMap();
+					return;
 				}
 			}
 
@@ -287,21 +308,12 @@ struct Spire
 					Build(j, i);
 		IncrementList();
 
-
 		auto freezeRounds = 0;
 		auto freezePower = 0;
 		TotalDamage = 0;
 
-
-
-
 		for (int j = 0; j < LevelCount; j++)
 		{
-
-			if (_mapIndex == 64 && j == 1)
-			{
-				bool test = true;
-			}
 			auto fireTraps = 0;
 			auto tower = -1;
 			for (int i = 0; i < ColumnCount; i++)
