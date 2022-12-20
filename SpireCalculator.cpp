@@ -112,6 +112,19 @@ struct FrostTrapII : FrostTrap
 	}
 };
 
+struct FrostTrapIII : FrostTrapII
+{
+	FrostTrapIII()
+	{
+		Mark = 'I';
+		TotalDamage = BaseDamage = 500;
+		ApplyFreeze = 4;
+		FreezePower = 1;
+		Ignite = &IgniteTrap;
+		Freeze = &AntiFreezeCell;
+	}
+};
+
 
 
 struct StrengthTowerI : Trap
@@ -280,7 +293,7 @@ struct Spire
 			Traps[j][i] = FireTrapII();
 			break;
 		case 1:
-			Traps[j][i] = FrostTrapII();
+			Traps[j][i] = FrostTrapIII();
 			break;
 		case 2:
 			Traps[j][i] = StrengthTowerI();
@@ -298,8 +311,8 @@ struct Spire
 					Build(j, i);
 		IncrementList();
 
-		auto freezeRounds = 0;
-		auto freezePower = 0;
+		int freezeRounds = 0;
+		int static freezePower = 0;
 		TotalDamage = 0;
 
 		for (int j = 0; j < LevelCount; j++)
@@ -329,18 +342,20 @@ struct Spire
 
 			for (int i = 0; i < ColumnCount; i++)
 			{
-
+				float static freezeMultiplier;
 				Traps[j][i].Freeze(&Traps[j][i], 0);
 
 				if (Traps[j][i].ApplyFreeze > 0)
 				{
 					freezeRounds = std::max(freezeRounds, Traps[j][i].ApplyFreeze);
 					freezePower = Traps[j][i].FreezePower;
+					freezeMultiplier = Traps[j][i].BaseDamage == 500 ? 1.25 : 1.0;
 				}
 				else if (freezeRounds > 0)
 				{
 					Traps[j][i].Freeze(&Traps[j][i], freezePower);
 					freezeRounds = std::max(--freezeRounds, 0);
+					Traps[j][i].TotalDamage *= freezeMultiplier;
 				}
 				TotalDamage += Traps[j][i].TotalDamage;
 			}
@@ -425,8 +440,8 @@ struct Spire
 			for (int i = 0; i < ColumnCount; i++)
 			{
 				FormatText(Map[j][i]);
-				const auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
 				const auto multiplier = Traps[j][i].SlowMultiplier + 1;
+				const auto round = Traps[j][i].TotalDamage / multiplier; // Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
 				auto formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
 				std::cout << formattedWord;
 			}
