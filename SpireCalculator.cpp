@@ -131,7 +131,7 @@ constexpr bool output = true;
 constexpr bool debug = false;
 
 static constexpr int LevelCount = 7;
-static constexpr int MaxTowers = 2;
+static constexpr int MaxTowers = 3;
 static constexpr int ColumnCount = 5;
 static constexpr int Offset = 4;
 static int towerTokens = MaxTowers;
@@ -165,7 +165,7 @@ struct Spire
 
 	static void CopyToBestMap()
 	{
-		for (int j = 0; j < Locked; j++)
+		for (int j = 0; j < Locked + 1 && j < LevelCount; j++)
 			for (int i = 0; i < ColumnCount; i++)
 				BestMap[j][i] = Map[j][i];
 	}
@@ -453,7 +453,7 @@ int main()
 	for (; ; )
 	{
 		Spire spire;
-		if (spire.TotalDamage >= maxDamage)
+		if (spire.TotalDamage > maxDamage)
 		{
 			Spire::CopyToBestMap();
 			maxDamage = spire.TotalDamage;
