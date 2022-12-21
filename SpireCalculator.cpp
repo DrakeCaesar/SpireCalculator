@@ -1,144 +1,11 @@
 // ReSharper disable CppInconsistentNaming
+// ReSharper disable CppDefaultCaseNotHandledInSwitchStatement
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <fstream>
 
-struct Trap
-{
-	int BaseDamage = 0;
-	int DamageMultiplier = 1;
-	int SlowMultiplier = 0;
-
-	int TotalDamage = 0;
-	int ApplyFreeze = 0;
-	int FreezePower = 0;
-	char Mark = ' ';
-
-	bool Frozen = false;
-	void (*Ignite)(Trap*, int, int) = nullptr;
-	void (*Freeze)(Trap*, int) = nullptr;
-};
-
-
-void IgniteTrap(Trap* trap, int dummy = 0, int dummy1 = 0)
-{
-}
-void IgniteFireTrapI(Trap* trap, int dummy = 0, int dummy1 = 0)
-{
-	trap->DamageMultiplier = 2;
-	trap->TotalDamage = trap->BaseDamage * (trap->SlowMultiplier + 1) * trap->DamageMultiplier;
-}
-void IgniteFireTrapII(Trap* trap, int dummy = 0, int dummy1 = 0)
-{
-	trap->DamageMultiplier = 2;
-	trap->TotalDamage = trap->BaseDamage * (trap->SlowMultiplier + 1) * trap->DamageMultiplier;
-}
-
-void IgniteStrengthTowerI(Trap* trap, int dummy = 0, int dummy1 = 0)
-{
-	trap->BaseDamage = dummy1 * 2;
-	trap->DamageMultiplier = dummy;
-	trap->TotalDamage = trap->BaseDamage * (trap->SlowMultiplier + 1) * trap->DamageMultiplier;
-}
-
-void FreezeCell(Trap* trap, const int freezePower)
-{
-	if (freezePower == 0)
-	{
-		trap->SlowMultiplier = freezePower;
-		trap->TotalDamage = trap->BaseDamage * (trap->SlowMultiplier + 1) * trap->DamageMultiplier;
-		trap->Frozen = false;
-	}
-	else
-	{
-		trap->SlowMultiplier = freezePower;
-		trap->TotalDamage = trap->BaseDamage * (trap->SlowMultiplier + 1) * trap->DamageMultiplier;
-		trap->Frozen = true;
-	}
-}
-void AntiFreezeCell(Trap* trap, int freezePower)
-{
-
-}
-
-struct FireTrap : Trap
-{
-	FireTrap()
-	{
-		Mark = 'F';
-		TotalDamage = BaseDamage = 50;
-		Ignite = &IgniteFireTrapI;
-		Freeze = &FreezeCell;
-	}
-};
-
-struct FireTrapII : FireTrap
-{
-	FireTrapII()
-	{
-		Mark = 'F';
-		TotalDamage = BaseDamage = 500;
-		Ignite = &IgniteFireTrapII;
-		Freeze = &FreezeCell;
-	}
-
-};
-
-struct FrostTrap : Trap
-{
-	FrostTrap()
-	{
-		Mark = 'I';
-		TotalDamage = BaseDamage = 10;
-		ApplyFreeze = 3;
-		FreezePower = 1;
-		Ignite = &IgniteTrap;
-		Freeze = &AntiFreezeCell;
-	}
-};
-
-
-struct FrostTrapII : FrostTrap
-{
-	FrostTrapII()
-	{
-		Mark = 'I';
-		TotalDamage = BaseDamage = 50;
-		ApplyFreeze = 4;
-		FreezePower = 1;
-		Ignite = &IgniteTrap;
-		Freeze = &AntiFreezeCell;
-	}
-};
-
-struct FrostTrapIII : FrostTrapII
-{
-	FrostTrapIII()
-	{
-		Mark = 'I';
-		TotalDamage = BaseDamage = 500;
-		ApplyFreeze = 4;
-		FreezePower = 1;
-		Ignite = &IgniteTrap;
-		Freeze = &AntiFreezeCell;
-	}
-};
-
-
-
-struct StrengthTowerI : Trap
-{
-	StrengthTowerI()
-	{
-		Mark = 'T';
-		BaseDamage = 50;
-		Ignite = &IgniteStrengthTowerI;
-		Freeze = &FreezeCell;
-	}
-};
-
-
+int TotalDamage;
 
 constexpr bool output = true;
 constexpr bool debug = false;
@@ -153,33 +20,149 @@ static bool Exhausted = false;
 static int Locked = 0;
 static uint8_t Map[LevelCount][ColumnCount];
 static uint8_t BestMap[LevelCount][ColumnCount];
-static uint8_t DebugMap[LevelCount][ColumnCount] =
+
+static short damageTable[12]
 {
-	{1,0,0,0,1},
-	{2,0,0,0,0},
-	{1,0,0,0,1},
-	{2,0,0,0,0},
-	{1,0,0,0,0},
-	{1,0,0,0,0}
+	50,  //Base
+	100, //Tower x 1 or Fire w/ Tower
+	200, //Tower x 2
+	300, //Tower x 3
+	400, //Tower x 4
+	100, //Base w/ Freeze
+	200, //Tower x 1 or Fire w/ Tower and Freeze
+	400, //Tower x 2 w/ Freeze
+	600, //Tower x 3 w/ Freeze
+	800, //Tower x 4 w/ Freeze
+	10,  //Frost
+	3   //Freeze Cells
 };
 
-static Trap Traps[LevelCount][ColumnCount];
+void updateDamageTable(uint_fast8_t fireTrapLevel, uint_fast8_t frostTrapLevel)
+{
+	if (fireTrapLevel == 2)
+		for (int_fast8_t i = 0; i < 10; i++)
+			damageTable[i] *= 10;
+
+	if (frostTrapLevel == 3)
+		for (int_fast8_t i = 5; i < 10; i++)
+			damageTable[i] = damageTable[i] / 4 * 5;
+
+	if (frostTrapLevel == 2)
+	{
+		damageTable[10] = 50;
+		damageTable[11] = 4;
+	}
+	if (frostTrapLevel == 3)
+	{
+		damageTable[10] = 500;
+		damageTable[11] = 4;
+	}
+
+}
+
+
 static std::stringstream outputString;
+
+void Populate()
+{
+	int freezeRounds = 0;
+
+	for (int_fast8_t j = 0; j < LevelCount; j++)
+	{
+		uint_fast8_t fireTraps = 0;
+		char tower = -1;
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			switch (Map[j][i])
+			{
+			case 0:
+				++fireTraps;
+				break;
+			case 2:
+				tower = i;
+			}
+		}
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			switch (Map[j][i])
+			{
+			case 0:
+				TotalDamage += damageTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
+				freezeRounds = std::max(freezeRounds - 1, 0);
+				break;
+			case 1:
+				freezeRounds = damageTable[11];
+				TotalDamage += damageTable[10];
+				break;
+			case 2:
+				TotalDamage += damageTable[fireTraps + (freezeRounds ? 5 : 0)];
+				freezeRounds = std::max(freezeRounds - 1, 0);
+				break;
+			}
+		}
+	}
+}
+
+void Populate(short damageMap[LevelCount][ColumnCount][2])
+{
+	int freezeRounds = 0;
+
+	for (int_fast8_t j = 0; j < LevelCount; j++)
+	{
+		int_fast8_t fireTraps = 0;
+		int_fast8_t tower = -1;
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			switch (Map[j][i])
+			{
+			case 0:
+				++fireTraps;
+				break;
+			case 2:
+				tower = i;
+			}
+		}
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			damageMap[j][i][1] = 1;
+			switch (Map[j][i])
+			{
+			case 0:
+				damageMap[j][i][0] = damageTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
+				if (freezeRounds != 0)
+					damageMap[j][i][1] = 2;
+				freezeRounds = std::max(freezeRounds - 1, 0);
+				break;
+			case 1:
+				freezeRounds = damageTable[11];
+				damageMap[j][i][0] = damageTable[10];
+				break;
+			case 2:
+				damageMap[j][i][0] = damageTable[fireTraps + (freezeRounds ? 5 : 0)];
+				if (freezeRounds != 0)
+					damageMap[j][i][1] = 2;
+				freezeRounds = std::max(freezeRounds - 1, 0);
+				break;
+			}
+		}
+	}
+}
 
 
 struct Spire
 {
-	int TotalDamage = 0;
 
 	Spire()
 	{
+		IncrementList();
+		TotalDamage = 0;
 		Populate();
 	}
 
 	static void CopyToBestMap()
 	{
-		for (int j = 0; j < Locked + 1 && j < LevelCount; j++)
-			for (int i = 0; i < ColumnCount; i++)
+		for (int_fast8_t j = 0; j < Locked + 1 && j < LevelCount; j++)
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
 				BestMap[j][i] = Map[j][i];
 	}
 
@@ -187,11 +170,11 @@ struct Spire
 	{
 		static int closest = 0;
 		int points = 0;
-		for (int j = 0; j < LevelCount; j++)
-			for (int i = 0; i < ColumnCount; i++)
+		for (int_fast8_t j = 0; j < LevelCount; j++)
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
 			{
-				if (DebugMap[j][i] != Map[j][i])
-					return false;
+				//if (DebugMap[j][i] != Map[j][i])
+				//	return false;
 				++points;
 				if (points > closest && Locked == 1)
 					closest = points;
@@ -202,14 +185,11 @@ struct Spire
 	static void CopyToMap()
 	{
 		towerTokens = MaxTowers;
-		for (int j = 0; j < LevelCount; j++)
-			for (int i = 0; i < ColumnCount; i++)
+		for (int_fast8_t j = 0; j < LevelCount; j++)
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
 			{
 				if (j < Locked)
-				{
 					Map[j][i] = BestMap[j][i];
-					Build(j, i);
-				}
 				if (Map[j][i] == 2)
 					--towerTokens;
 			}
@@ -220,7 +200,7 @@ struct Spire
 		++mapIndex;
 		uint8_t carryover = 1;
 
-		for (int j = Locked; j < LevelCount; j++)
+		for (int_fast8_t j = Locked; j < LevelCount; j++)
 		{
 			bool columnHasTower = false;
 			if (j > Offset && carryover == 1)
@@ -234,12 +214,12 @@ struct Spire
 				}
 			}
 
-			for (int i = 0; i < ColumnCount; i++)
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
 			{
 				if (Map[j][i] == 2)
 					columnHasTower = true;
 			}
-			for (int i = 0; i < ColumnCount; i++)
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
 			{
 				const uint8_t oldTower = Map[j][i];
 				const uint8_t hadToken = Map[j][i] == 2;
@@ -254,12 +234,12 @@ struct Spire
 					towerTokens = hadToken ? ++towerTokens : --towerTokens;
 				}
 				else if
-					(Map[j][i] == 1 && 
-					(j != 0 || i != 0) && 
-					(j != 0 || Map[0][i - 1] == 1) && 
-					(i != 0 || Map[j - 1][ColumnCount - 1] == 1) && 
-					(i == 0 || Map[j][i - 1] == 1))
-						++Map[j][i];
+					(Map[j][i] == 1 &&
+						(j != 0 || i != 0) &&
+						(j != 0 || Map[0][i - 1] == 1) &&
+						(i != 0 || Map[j - 1][ColumnCount - 1] == 1) &&
+						(i == 0 || Map[j][i - 1] == 1))
+					++Map[j][i];
 				if (Map[j][i] == 2)
 				{
 					const bool optimalTowerPlacement = (i == 0 || Map[j][i - 1] != 0) && j % 2 == 1;
@@ -274,92 +254,12 @@ struct Spire
 						carryover = 1;
 					}
 				}
-				if (oldTower != Map[j][i])
-					Build(j, i);
 				if (carryover == 0)
 					return;
 			}
 		}
 
 		Exhausted = true;
-	}
-
-
-	static void Build(const int j, const int i)
-	{
-		switch (Map[j][i])
-		{
-		case 0:
-			Traps[j][i] = FireTrapII();
-			break;
-		case 1:
-			Traps[j][i] = FrostTrapIII();
-			break;
-		case 2:
-			Traps[j][i] = StrengthTowerI();
-			break;
-		default:
-			break;
-		}
-	}
-
-	void Populate()
-	{
-		if (mapIndex == 0)
-			for (int j = 0; j < LevelCount; j++)
-				for (int i = 0; i < ColumnCount; i++)
-					Build(j, i);
-		IncrementList();
-
-		int freezeRounds = 0;
-		int static freezePower = 0;
-		TotalDamage = 0;
-
-		for (int j = 0; j < LevelCount; j++)
-		{
-			auto fireTraps = 0;
-			auto tower = -1;
-			for (int i = 0; i < ColumnCount; i++)
-			{
-				if (tower == -1 && Map[j][i] == 2)
-					tower = i;
-				if (Map[j][i] == 0)
-				{
-					if (tower == -1)
-					{
-						for (int k = 0; k < ColumnCount; k++)
-							Traps[j][k].DamageMultiplier = 1;
-						break;
-					}
-					fireTraps++;
-					Traps[j][i].Ignite(&Traps[j][i], 0, 0);
-				}
-				if (tower == -1)
-					break;
-				if (i == ColumnCount - 1 && fireTraps != 0)
-					Traps[j][tower].Ignite(&Traps[j][tower], fireTraps, 500);
-			}
-
-			for (int i = 0; i < ColumnCount; i++)
-			{
-				float static freezeMultiplier;
-				Traps[j][i].Freeze(&Traps[j][i], 0);
-
-				if (Traps[j][i].ApplyFreeze > 0)
-				{
-					freezeRounds = std::max(freezeRounds, Traps[j][i].ApplyFreeze);
-					freezePower = Traps[j][i].FreezePower;
-					freezeMultiplier = Traps[j][i].BaseDamage == 500 ? 1.25 : 1.0;
-				}
-				else if (freezeRounds > 0)
-				{
-					Traps[j][i].Freeze(&Traps[j][i], freezePower);
-					freezeRounds = std::max(--freezeRounds, 0);
-					Traps[j][i].TotalDamage *= freezeMultiplier;
-				}
-				TotalDamage += Traps[j][i].TotalDamage;
-			}
-		}
 	}
 
 	static void FormatText(const int trap)
@@ -395,27 +295,26 @@ struct Spire
 		//Console.ForegroundColor = ConsoleColor.White;
 	}
 
-	void PrintDamageToFile() const
-	{
+	//void PrintDamageToFile() const
+	//{
 
-		for (int j = LevelCount - 1; j >= 0; j--)
-		{
-			for (int i = 0; i < ColumnCount; i++)
-			{
-				const auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
-				const auto multiplier = Traps[j][i].SlowMultiplier + 1;
-				auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
-				outputString << formattedWord;
-			}
+	//	for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
+	//	{
+	//		for (int_fast8_t i = 0; i < ColumnCount; i++)
+	//		{
+	//			const auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
+	//			const auto multiplier = Traps[j][i].SlowMultiplier + 1;
+	//			auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
+	//			outputString << formattedWord;
+	//		}
 
-			outputString << std::endl;
-		}
+	//		outputString << std::endl;
+	//	}
 
-		const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
-			mapIndex) + "\n\n";
-		outputString << damageOutput;
-
-	}
+	//	const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+	//		mapIndex) + "\n\n";
+	//	outputString << damageOutput;
+	//}
 
 	static std::string padLeft(std::string str, const unsigned long long n)
 	{
@@ -432,16 +331,20 @@ struct Spire
 		return str;
 	}
 
+
+
 	void PrintDamageToConsole() const
 	{
+		static short PrintMap[LevelCount][ColumnCount][2];
+		Populate(PrintMap);
 
-		for (int j = LevelCount - 1; j >= 0; j--)
+		for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
 		{
-			for (int i = 0; i < ColumnCount; i++)
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
 			{
 				FormatText(Map[j][i]);
-				const auto multiplier = Traps[j][i].SlowMultiplier + 1;
-				const auto round = Traps[j][i].TotalDamage / multiplier; // Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
+				const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
+				const auto multiplier = PrintMap[j][i][1];
 				auto formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
 				std::cout << formattedWord;
 			}
@@ -454,9 +357,8 @@ struct Spire
 			mapIndex) + "\n\n";
 		std::cout << damageOutput;
 	}
-
-
 };
+
 
 
 int main()
@@ -464,21 +366,23 @@ int main()
 	// See https://aka.ms/new-console-template for more information
 
 	int maxDamage = 0;
+	updateDamageTable(2, 3);
 
 	for (; ; )
 	{
+		TotalDamage = 0;
 		Spire spire;
-		if (spire.TotalDamage > maxDamage)
+		if (TotalDamage > maxDamage)
 		{
 			Spire::CopyToBestMap();
-			maxDamage = spire.TotalDamage;
+			maxDamage = TotalDamage;
 			if (output)
 				spire.PrintDamageToConsole();
 		}
 
 		if (debug)
 		{
-			spire.PrintDamageToFile();
+			//spire.PrintDamageToFile();
 			//if (Spire._mapIndex % 1000 == 0)
 			//{
 			//    Console.WriteLine(Spire._mapIndex);
