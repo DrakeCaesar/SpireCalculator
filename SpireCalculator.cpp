@@ -7,19 +7,20 @@
 
 int TotalDamage;
 
-constexpr bool output = true;
+constexpr bool output = false;
 constexpr bool debug = false;
 
 static constexpr int LevelCount = 7;
 static constexpr int MaxTowers = 3;
 static constexpr int ColumnCount = 5;
-static constexpr int Offset = 4;
+static constexpr int Offset = 3;
 static int towerTokens = MaxTowers;
 static long mapIndex = 0;
 static bool Exhausted = false;
 static int Locked = 0;
 static int_fast8_t Map[LevelCount][ColumnCount];
 static int_fast8_t BestMap[LevelCount][ColumnCount];
+static std::stringstream outputString;
 
 static short damageTable[12]
 {
@@ -61,11 +62,11 @@ void updateDamageTable(uint_fast8_t fireTrapLevel, uint_fast8_t frostTrapLevel)
 }
 
 
-static std::stringstream outputString;
 
-void Populate()
+
+static void Populate()
 {
-	short damageCountTable[11] = {0};
+	short damageCountTable[11] = { 0 };
 	int freezeRounds = 0;
 
 	for (int_fast8_t j = 0; j < LevelCount; j++)
@@ -102,9 +103,9 @@ void Populate()
 			}
 		}
 	}
-
+	TotalDamage = 0;
 	for (int_fast8_t i = 0; i < 10; i++)
-		TotalDamage+= damageTable[i]*damageCountTable[i];
+		TotalDamage += damageTable[i] * damageCountTable[i];
 }
 
 void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
@@ -156,190 +157,190 @@ void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
 
 
 
-	static void CopyToBestMap()
-	{
-		for (int_fast8_t j = 0; j < Locked + 1 && j < LevelCount; j++)
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
-				BestMap[j][i] = Map[j][i];
-	}
+static void CopyToBestMap()
+{
+	for (int_fast8_t j = 0; j < Locked + 1 && j < LevelCount; j++)
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+			BestMap[j][i] = Map[j][i];
+}
 
-	static bool CompareMap()
+static bool CompareMap()
+{
+	static int closest = 0;
+	int points = 0;
+	for (int_fast8_t j = 0; j < LevelCount; j++)
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			//if (DebugMap[j][i] != Map[j][i])
+			//	return false;
+			++points;
+			if (points > closest && Locked == 1)
+				closest = points;
+		}
+	return true;
+}
+
+static void CopyToMap()
+{
+	towerTokens = MaxTowers;
+	for (int_fast8_t j = 0; j < LevelCount; j++)
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			if (j < Locked)
+				Map[j][i] = BestMap[j][i];
+			if (Map[j][i] == 2)
+				--towerTokens;
+		}
+}
+
+static void IncrementList()
+{
+	++mapIndex;
+	int_fast8_t carryover = 1;
+
+	for (int_fast8_t j = Locked; j < LevelCount; j++)
 	{
-		static int closest = 0;
-		int points = 0;
-		for (int_fast8_t j = 0; j < LevelCount; j++)
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
+		bool columnHasTower = false;
+		if (j > Offset && carryover == 1)
+		{
+			if (j - Offset > Locked)
 			{
-				//if (DebugMap[j][i] != Map[j][i])
-				//	return false;
-				++points;
-				if (points > closest && Locked == 1)
-					closest = points;
+
+				Locked = j - Offset;
+				CopyToMap();
+				return;
 			}
-		return true;
-	}
+		}
 
-	static void CopyToMap()
-	{
-		towerTokens = MaxTowers;
-		for (int_fast8_t j = 0; j < LevelCount; j++)
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			if (Map[j][i] == 2)
+				columnHasTower = true;
+		}
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		{
+			const int_fast8_t oldTower = Map[j][i];
+			const int_fast8_t hadToken = Map[j][i] == 2;
+			Map[j][i] += carryover;
+			carryover = 0;
+
+			if (Map[j][i] == 3)
 			{
-				if (j < Locked)
-					Map[j][i] = BestMap[j][i];
-				if (Map[j][i] == 2)
+				carryover = 1;
+				columnHasTower = false;
+				Map[j][i] = 0;
+				towerTokens = hadToken ? ++towerTokens : --towerTokens;
+			}
+			else if
+				(Map[j][i] == 1 &&
+					(j != 0 || i != 0) &&
+					(j != 0 || Map[0][i - 1] == 1) &&
+					(i != 0 || Map[j - 1][ColumnCount - 1] == 1) &&
+					(i == 0 || Map[j][i - 1] == 1))
+				++Map[j][i];
+			if (Map[j][i] == 2)
+			{
+				const bool optimalTowerPlacement = (i == 0 || Map[j][i - 1] != 0) && j % 2 == 1;
+				if (towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
+				{
 					--towerTokens;
-			}
-	}
-
-	static void IncrementList()
-	{
-		++mapIndex;
-		int_fast8_t carryover = 1;
-
-		for (int_fast8_t j = Locked; j < LevelCount; j++)
-		{
-			bool columnHasTower = false;
-			if (j > Offset && carryover == 1)
-			{
-				if (j - Offset > Locked)
-				{
-
-					Locked = j - Offset;
-					CopyToMap();
-					return;
-				}
-			}
-
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
-			{
-				if (Map[j][i] == 2)
 					columnHasTower = true;
-			}
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
-			{
-				const int_fast8_t oldTower = Map[j][i];
-				const int_fast8_t hadToken = Map[j][i] == 2;
-				Map[j][i] += carryover;
-				carryover = 0;
-
-				if (Map[j][i] == 3)
+				}
+				else if ((towerTokens == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
 				{
-					carryover = 1;
-					columnHasTower = false;
 					Map[j][i] = 0;
-					towerTokens = hadToken ? ++towerTokens : --towerTokens;
+					carryover = 1;
 				}
-				else if
-					(Map[j][i] == 1 &&
-						(j != 0 || i != 0) &&
-						(j != 0 || Map[0][i - 1] == 1) &&
-						(i != 0 || Map[j - 1][ColumnCount - 1] == 1) &&
-						(i == 0 || Map[j][i - 1] == 1))
-					++Map[j][i];
-				if (Map[j][i] == 2)
-				{
-					const bool optimalTowerPlacement = (i == 0 || Map[j][i - 1] != 0) && j % 2 == 1;
-					if (towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
-					{
-						--towerTokens;
-						columnHasTower = true;
-					}
-					else if ((towerTokens == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
-					{
-						Map[j][i] = 0;
-						carryover = 1;
-					}
-				}
-				if (carryover == 0)
-					return;
 			}
-		}
-
-		Exhausted = true;
-	}
-
-
-	static void FormatText(const int trap = -1)
-	{
-		switch (trap)
-		{
-		case 0:
-			std::cout << "\x1b[41;1m"; //White on DarkRed
-			break;
-		case 1:
-			std::cout << "\x1b[44;1m"; //White on DarkBlue
-			break;
-		case 2:
-			std::cout << "\x1b[43;1m"; //White on DarkYellow
-			break;
-		default:
-			std::cout << "\x1b[39;49m"; //White on Black
-			break;
+			if (carryover == 0)
+				return;
 		}
 	}
 
-	static std::string padLeft(std::string str, const unsigned long long n)
-	{
-		if (n <= str.size())
-			return str;
-		str.insert(0, n - str.size(), ' '); return str;
-	}
+	Exhausted = true;
+}
 
-	static std::string padRight(std::string str, const unsigned long long n)
+
+static void FormatText(const int trap = -1)
+{
+	switch (trap)
 	{
-		if (n <= str.size())
-			return str;
-		str.insert(str.size(), n - str.size(), ' ');
+	case 0:
+		std::cout << "\x1b[41;1m"; //White on DarkRed
+		break;
+	case 1:
+		std::cout << "\x1b[44;1m"; //White on DarkBlue
+		break;
+	case 2:
+		std::cout << "\x1b[43;1m"; //White on DarkYellow
+		break;
+	default:
+		std::cout << "\x1b[39;49m"; //White on Black
+		break;
+	}
+}
+
+static std::string padLeft(std::string str, const unsigned long long n)
+{
+	if (n <= str.size())
 		return str;
-	}
+	str.insert(0, n - str.size(), ' '); return str;
+}
 
-	void PrintDamageToFile()
+static std::string padRight(std::string str, const unsigned long long n)
+{
+	if (n <= str.size())
+		return str;
+	str.insert(str.size(), n - str.size(), ' ');
+	return str;
+}
+
+void PrintDamageToFile()
+{
+	static short PrintMap[LevelCount][ColumnCount][2];
+	PopulatePrint(PrintMap);
+	for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
 	{
-		static short PrintMap[LevelCount][ColumnCount][2];
-		PopulatePrint(PrintMap);
-		for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
 		{
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
-			{
-				const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
-				const auto multiplier = PrintMap[j][i][1];
-				auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
-				outputString << formattedWord;
-			}
-
-			outputString << std::endl;
+			const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
+			const auto multiplier = PrintMap[j][i][1];
+			auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
+			outputString << formattedWord;
 		}
 
-		const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
-			mapIndex) + "\n\n";
-		outputString << damageOutput;
+		outputString << std::endl;
 	}
 
-	void PrintDamageToConsole()
+	const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+		mapIndex) + "\n\n";
+	outputString << damageOutput;
+}
+
+void PrintDamageToConsole()
+{
+	static short PrintMap[LevelCount][ColumnCount][2];
+	PopulatePrint(PrintMap);
+
+	for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
 	{
-		static short PrintMap[LevelCount][ColumnCount][2];
-		PopulatePrint(PrintMap);
-
-		for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
+		for (int_fast8_t i = 0; i < ColumnCount; i++)
 		{
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
-			{
-				FormatText(Map[j][i]);
-				const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
-				const auto multiplier = PrintMap[j][i][1];
-				auto formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
-				std::cout << formattedWord;
-			}
-
-			FormatText();
-			std::cout << std::endl;
+			FormatText(Map[j][i]);
+			const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
+			const auto multiplier = PrintMap[j][i][1];
+			auto formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
+			std::cout << formattedWord;
 		}
 
-		auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
-			mapIndex) + "\n\n";
-		std::cout << damageOutput;
+		FormatText();
+		std::cout << std::endl;
 	}
+
+	auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+		mapIndex) + "\n\n";
+	std::cout << damageOutput;
+}
 
 
 
@@ -352,9 +353,7 @@ int main()
 
 	for (; ; )
 	{
-		TotalDamage = 0;
 		IncrementList();
-		TotalDamage = 0;
 		Populate();
 		if (TotalDamage > maxDamage)
 		{
