@@ -7,13 +7,13 @@
 
 int TotalDamage;
 
-constexpr bool output = false;
+constexpr bool output = true;
 constexpr bool debug = false;
 
 static constexpr int LevelCount = 7;
 static constexpr int MaxTowers = 3;
 static constexpr int ColumnCount = 5;
-static constexpr int Offset = 3;
+static constexpr int Offset = 4;
 static int towerTokens = MaxTowers;
 static long mapIndex = 0;
 static bool Exhausted = false;
@@ -59,53 +59,6 @@ void updateDamageTable(uint_fast8_t fireTrapLevel, uint_fast8_t frostTrapLevel)
 		damageTable[11] = 4;
 	}
 
-}
-
-
-
-
-static void Populate()
-{
-	short damageCountTable[11] = { 0 };
-	int freezeRounds = 0;
-
-	for (int_fast8_t j = 0; j < LevelCount; j++)
-	{
-		uint_fast8_t fireTraps = 0;
-		char tower = -1;
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
-		{
-			switch (Map[j][i])
-			{
-			case 0:
-				++fireTraps;
-				break;
-			case 2:
-				tower = i;
-			}
-		}
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
-		{
-			switch (Map[j][i])
-			{
-			case 0:
-				++damageCountTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
-				freezeRounds = std::max(freezeRounds - 1, 0);
-				break;
-			case 1:
-				freezeRounds = damageTable[11];
-				++damageCountTable[10];
-				break;
-			case 2:
-				++damageCountTable[fireTraps + (freezeRounds ? 5 : 0)];
-				freezeRounds = std::max(freezeRounds - 1, 0);
-				break;
-			}
-		}
-	}
-	TotalDamage = 0;
-	for (int_fast8_t i = 0; i < 10; i++)
-		TotalDamage += damageTable[i] * damageCountTable[i];
 }
 
 void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
@@ -171,8 +124,6 @@ static bool CompareMap()
 	for (int_fast8_t j = 0; j < LevelCount; j++)
 		for (int_fast8_t i = 0; i < ColumnCount; i++)
 		{
-			//if (DebugMap[j][i] != Map[j][i])
-			//	return false;
 			++points;
 			if (points > closest && Locked == 1)
 				closest = points;
@@ -354,7 +305,46 @@ int main()
 	for (; ; )
 	{
 		IncrementList();
-		Populate();
+
+		short damageCountTable[11] = { 0 };
+		int freezeRounds = 0;
+		for (int_fast8_t j = 0; j < LevelCount; j++)
+		{
+			uint_fast8_t fireTraps = 0;
+			char tower = -1;
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
+			{
+				switch (Map[j][i])
+				{
+				case 0:
+					++fireTraps;
+					break;
+				case 2:
+					tower = i;
+				}
+			}
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
+			{
+				switch (Map[j][i])
+				{
+				case 0:
+					++damageCountTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
+					freezeRounds = std::max(freezeRounds - 1, 0);
+					break;
+				case 1:
+					freezeRounds = damageTable[11];
+					++damageCountTable[10];
+					break;
+				case 2:
+					++damageCountTable[fireTraps + (freezeRounds ? 5 : 0)];
+					freezeRounds = std::max(freezeRounds - 1, 0);
+				}
+			}
+		}
+		TotalDamage = 0;
+		for (int_fast8_t i = 0; i < 10; i++)
+			TotalDamage += damageTable[i] * damageCountTable[i];
+
 		if (TotalDamage > maxDamage)
 		{
 			CopyToBestMap();
@@ -375,6 +365,7 @@ int main()
 		if (Exhausted)
 		{
 			//Console.ReadLine();
+			std::cout <<"Total iterations: " << mapIndex;
 
 			if (!debug)
 				return 0;
