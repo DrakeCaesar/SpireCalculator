@@ -257,9 +257,7 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 
 	static void FormatText()
 	{
-		std::cout << "\x1b[39;49m";
-		//Console.BackgroundColor = ConsoleColor.Black;
-		//Console.ForegroundColor = ConsoleColor.White;
+		std::cout << "\x1b[39;49m"; //White on Black
 	}
 
 	static void FormatText(const int trap)
@@ -268,22 +266,16 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 		switch (trap)
 		{
 		case 0:
-			std::cout << "\x1b[41;1m";
-
-			//Console.BackgroundColor = ConsoleColor.DarkRed;
+			std::cout << "\x1b[41;1m"; //White on DarkRed
 			break;
 		case 1:
-			std::cout << "\x1b[44;1m";
-			//Console.BackgroundColor = ConsoleColor.DarkBlue;
+			std::cout << "\x1b[44;1m"; //White on DarkBlue
 			break;
 		case 2:
-			std::cout << "\x1b[43;1m";
-
-			//Console.BackgroundColor = ConsoleColor.DarkYellow;
-			//Console.ForegroundColor = ConsoleColor.Black;
+			std::cout << "\x1b[43;1m"; //White on DarkYellow
 			break;
 		default:
-			std::cout << "\x1b[39;49m";
+			std::cout << "\x1b[39;49m"; //White on Black
 			break;
 		}
 	}
