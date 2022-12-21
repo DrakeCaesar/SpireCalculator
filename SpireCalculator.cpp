@@ -255,14 +255,9 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 		Exhausted = true;
 	}
 
-	static void FormatText()
-	{
-		std::cout << "\x1b[39;49m"; //White on Black
-	}
 
-	static void FormatText(const int trap)
+	static void FormatText(const int trap = -1)
 	{
-		FormatText();
 		switch (trap)
 		{
 		case 0:
