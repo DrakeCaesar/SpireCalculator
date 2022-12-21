@@ -18,8 +18,8 @@ static int towerTokens = MaxTowers;
 static long mapIndex = 0;
 static bool Exhausted = false;
 static int Locked = 0;
-static uint8_t Map[LevelCount][ColumnCount];
-static uint8_t BestMap[LevelCount][ColumnCount];
+static int_fast8_t Map[LevelCount][ColumnCount];
+static int_fast8_t BestMap[LevelCount][ColumnCount];
 
 static short damageTable[12]
 {
@@ -149,15 +149,8 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 }
 
 
-struct Spire
-{
 
-	Spire()
-	{
-		IncrementList();
-		TotalDamage = 0;
-		Populate();
-	}
+
 
 	static void CopyToBestMap()
 	{
@@ -198,7 +191,7 @@ struct Spire
 	static void IncrementList()
 	{
 		++mapIndex;
-		uint8_t carryover = 1;
+		int_fast8_t carryover = 1;
 
 		for (int_fast8_t j = Locked; j < LevelCount; j++)
 		{
@@ -221,8 +214,8 @@ struct Spire
 			}
 			for (int_fast8_t i = 0; i < ColumnCount; i++)
 			{
-				const uint8_t oldTower = Map[j][i];
-				const uint8_t hadToken = Map[j][i] == 2;
+				const int_fast8_t oldTower = Map[j][i];
+				const int_fast8_t hadToken = Map[j][i] == 2;
 				Map[j][i] += carryover;
 				carryover = 0;
 
@@ -357,7 +350,6 @@ struct Spire
 			mapIndex) + "\n\n";
 		std::cout << damageOutput;
 	}
-};
 
 
 
@@ -371,13 +363,15 @@ int main()
 	for (; ; )
 	{
 		TotalDamage = 0;
-		Spire spire;
+		IncrementList();
+		TotalDamage = 0;
+		Populate();
 		if (TotalDamage > maxDamage)
 		{
-			Spire::CopyToBestMap();
+			CopyToBestMap();
 			maxDamage = TotalDamage;
 			if (output)
-				spire.PrintDamageToConsole();
+				PrintDamageToConsole();
 		}
 
 		if (debug)
