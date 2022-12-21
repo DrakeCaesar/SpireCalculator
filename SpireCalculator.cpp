@@ -255,6 +255,13 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 		Exhausted = true;
 	}
 
+	static void FormatText()
+	{
+		std::cout << "\x1b[39;49m";
+		//Console.BackgroundColor = ConsoleColor.Black;
+		//Console.ForegroundColor = ConsoleColor.White;
+	}
+
 	static void FormatText(const int trap)
 	{
 		FormatText();
@@ -281,12 +288,7 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 		}
 	}
 
-	static void FormatText()
-	{
-		std::cout << "\x1b[39;49m";
-		//Console.BackgroundColor = ConsoleColor.Black;
-		//Console.ForegroundColor = ConsoleColor.White;
-	}
+
 
 	//void PrintDamageToFile() const
 	//{
@@ -326,7 +328,7 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 
 
 
-	void PrintDamageToConsole() const
+	void PrintDamageToConsole()
 	{
 		static short PrintMap[LevelCount][ColumnCount][2];
 		Populate(PrintMap);
