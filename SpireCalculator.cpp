@@ -275,29 +275,6 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 		}
 	}
 
-
-
-	//void PrintDamageToFile() const
-	//{
-
-	//	for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
-	//	{
-	//		for (int_fast8_t i = 0; i < ColumnCount; i++)
-	//		{
-	//			const auto round = Traps[j][i].BaseDamage * Traps[j][i].DamageMultiplier;
-	//			const auto multiplier = Traps[j][i].SlowMultiplier + 1;
-	//			auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
-	//			outputString << formattedWord;
-	//		}
-
-	//		outputString << std::endl;
-	//	}
-
-	//	const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
-	//		mapIndex) + "\n\n";
-	//	outputString << damageOutput;
-	//}
-
 	static std::string padLeft(std::string str, const unsigned long long n)
 	{
 		if (n <= str.size())
@@ -313,7 +290,27 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 		return str;
 	}
 
+	void PrintDamageToFile()
+	{
+		static short PrintMap[LevelCount][ColumnCount][2];
+		Populate(PrintMap);
+		for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
+		{
+			for (int_fast8_t i = 0; i < ColumnCount; i++)
+			{
+				const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
+				const auto multiplier = PrintMap[j][i][1];
+				auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
+				outputString << formattedWord;
+			}
 
+			outputString << std::endl;
+		}
+
+		const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+			mapIndex) + "\n\n";
+		outputString << damageOutput;
+	}
 
 	void PrintDamageToConsole()
 	{
