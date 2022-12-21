@@ -65,6 +65,7 @@ static std::stringstream outputString;
 
 void Populate()
 {
+	short damageCountTable[11] = {0};
 	int freezeRounds = 0;
 
 	for (int_fast8_t j = 0; j < LevelCount; j++)
@@ -87,23 +88,26 @@ void Populate()
 			switch (Map[j][i])
 			{
 			case 0:
-				TotalDamage += damageTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
+				++damageCountTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
 				freezeRounds = std::max(freezeRounds - 1, 0);
 				break;
 			case 1:
 				freezeRounds = damageTable[11];
-				TotalDamage += damageTable[10];
+				++damageCountTable[10];
 				break;
 			case 2:
-				TotalDamage += damageTable[fireTraps + (freezeRounds ? 5 : 0)];
+				++damageCountTable[fireTraps + (freezeRounds ? 5 : 0)];
 				freezeRounds = std::max(freezeRounds - 1, 0);
 				break;
 			}
 		}
 	}
+
+	for (int_fast8_t i = 0; i < 10; i++)
+		TotalDamage+= damageTable[i]*damageCountTable[i];
 }
 
-void Populate(short damageMap[LevelCount][ColumnCount][2])
+void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
 {
 	int freezeRounds = 0;
 
@@ -293,7 +297,7 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 	void PrintDamageToFile()
 	{
 		static short PrintMap[LevelCount][ColumnCount][2];
-		Populate(PrintMap);
+		PopulatePrint(PrintMap);
 		for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
 		{
 			for (int_fast8_t i = 0; i < ColumnCount; i++)
@@ -315,7 +319,7 @@ void Populate(short damageMap[LevelCount][ColumnCount][2])
 	void PrintDamageToConsole()
 	{
 		static short PrintMap[LevelCount][ColumnCount][2];
-		Populate(PrintMap);
+		PopulatePrint(PrintMap);
 
 		for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
 		{
