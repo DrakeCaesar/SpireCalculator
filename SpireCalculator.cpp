@@ -5,24 +5,24 @@
 #include <string>
 #include <fstream>
 
-int TotalDamage;
+unsigned int TotalDamage;
 
 constexpr bool output = true;
 constexpr bool debug = false;
 
-static constexpr int LevelCount = 7;
-static constexpr int MaxTowers = 3;
-static constexpr int ColumnCount = 5;
-static constexpr int Offset = 4;
-static int towerTokens = MaxTowers;
-static long mapIndex = 0;
+static constexpr uint_fast8_t LevelCount = 7;
+static constexpr uint_fast8_t MaxTowers = 3;
+static constexpr uint_fast8_t ColumnCount = 5;
+static constexpr uint_fast8_t Offset = 4;
+static uint_fast8_t towerTokens = MaxTowers;
+static unsigned int mapIndex = 0;
 static bool Exhausted = false;
-static int Locked = 0;
-static int_fast8_t Map[LevelCount][ColumnCount];
-static int_fast8_t BestMap[LevelCount][ColumnCount];
+static uint_fast8_t Locked = 0;
+static uint_fast8_t Map[LevelCount][ColumnCount];
+static uint_fast8_t BestMap[LevelCount][ColumnCount];
 static std::stringstream outputString;
 
-static short damageTable[12]
+static uint_fast16_t damageTable[12]
 {
 	50,  //Base
 	100, //Tower x 1 or Fire w/ Tower
@@ -38,14 +38,14 @@ static short damageTable[12]
 	3   //Freeze Cells
 };
 
-void updateDamageTable(uint_fast8_t fireTrapLevel, uint_fast8_t frostTrapLevel)
+void updateDamageTable(const uint_fast8_t fireTrapLevel, const uint_fast8_t frostTrapLevel)
 {
 	if (fireTrapLevel == 2)
-		for (int_fast8_t i = 0; i < 10; i++)
+		for (uint_fast8_t i = 0; i < 10; i++)
 			damageTable[i] *= 10;
 
 	if (frostTrapLevel == 3)
-		for (int_fast8_t i = 5; i < 10; i++)
+		for (uint_fast8_t i = 5; i < 10; i++)
 			damageTable[i] = damageTable[i] / 4 * 5;
 
 	if (frostTrapLevel == 2)
@@ -61,15 +61,25 @@ void updateDamageTable(uint_fast8_t fireTrapLevel, uint_fast8_t frostTrapLevel)
 
 }
 
-void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
+uint_fast16_t max(const uint_fast16_t left, const uint_fast16_t right)
 {
-	int freezeRounds = 0;
+	return left < right ? right : left;
+}
 
-	for (int_fast8_t j = 0; j < LevelCount; j++)
+uint_fast8_t max(const uint_fast8_t left, const uint_fast8_t right)
+{
+	return left < right ? right : left;
+}
+
+void PopulatePrint(uint_fast16_t damageMap[LevelCount][ColumnCount][2])
+{
+	uint_fast16_t freezeRounds = 0;
+
+	for (uint_fast8_t j = 0; j < LevelCount; j++)
 	{
-		int_fast8_t fireTraps = 0;
-		int_fast8_t tower = -1;
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		uint_fast8_t fireTraps = 0;
+		uint_fast8_t tower = 5;
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
 			switch (Map[j][i])
 			{
@@ -80,16 +90,16 @@ void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
 				tower = i;
 			}
 		}
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
 			damageMap[j][i][1] = 1;
 			switch (Map[j][i])
 			{
 			case 0:
-				damageMap[j][i][0] = damageTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
+				damageMap[j][i][0] = damageTable[(tower == 5 ? 0 : 1) + (freezeRounds ? 5 : 0)];
 				if (freezeRounds != 0)
 					damageMap[j][i][1] = 2;
-				freezeRounds = std::max(freezeRounds - 1, 0);
+				freezeRounds = --freezeRounds != UINT_FAST16_MAX ? freezeRounds : 0;
 				break;
 			case 1:
 				freezeRounds = damageTable[11];
@@ -98,8 +108,8 @@ void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
 			case 2:
 				damageMap[j][i][0] = damageTable[fireTraps + (freezeRounds ? 5 : 0)];
 				if (freezeRounds != 0)
-					damageMap[j][i][1] = 2;
-				freezeRounds = std::max(freezeRounds - 1, 0);
+					damageMap[j][i][1] = 2; 
+				freezeRounds = --freezeRounds != UINT_FAST16_MAX ? freezeRounds : 0;
 				break;
 			}
 		}
@@ -107,35 +117,32 @@ void PopulatePrint(short damageMap[LevelCount][ColumnCount][2])
 }
 
 
-
-
-
 static void CopyToBestMap()
 {
-	for (int_fast8_t j = 0; j < Locked + 1 && j < LevelCount; j++)
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+	for (uint_fast8_t j = 0; j < Locked + 1 && j < LevelCount; j++)
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 			BestMap[j][i] = Map[j][i];
 }
 
-static bool CompareMap()
-{
-	static int closest = 0;
-	int points = 0;
-	for (int_fast8_t j = 0; j < LevelCount; j++)
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
-		{
-			++points;
-			if (points > closest && Locked == 1)
-				closest = points;
-		}
-	return true;
-}
+//static bool CompareMap()
+//{
+//	static uint_fast8_t closest = 0;
+//	uint_fast8_t points = 0;
+//	for (uint_fast8_t j = 0; j < LevelCount; j++)
+//		for (uint_fast8_t i = 0; i < ColumnCount; i++)
+//		{
+//			++points;
+//			if (points > closest && Locked == 1)
+//				closest = points;
+//		}
+//	return true;
+//}
 
 static void CopyToMap()
 {
 	towerTokens = MaxTowers;
-	for (int_fast8_t j = 0; j < LevelCount; j++)
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+	for (uint_fast8_t j = 0; j < LevelCount; j++)
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
 			if (j < Locked)
 				Map[j][i] = BestMap[j][i];
@@ -147,9 +154,9 @@ static void CopyToMap()
 static void IncrementList()
 {
 	++mapIndex;
-	int_fast8_t carryover = 1;
+	uint_fast8_t carryover = 1;
 
-	for (int_fast8_t j = Locked; j < LevelCount; j++)
+	for (uint_fast8_t j = Locked; j < LevelCount; j++)
 	{
 		bool columnHasTower = false;
 		if (j > Offset && carryover == 1)
@@ -163,15 +170,14 @@ static void IncrementList()
 			}
 		}
 
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
 			if (Map[j][i] == 2)
 				columnHasTower = true;
 		}
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
-			const int_fast8_t oldTower = Map[j][i];
-			const int_fast8_t hadToken = Map[j][i] == 2;
+			const uint_fast8_t hadToken = Map[j][i] == 2;
 			Map[j][i] += carryover;
 			carryover = 0;
 
@@ -212,7 +218,7 @@ static void IncrementList()
 }
 
 
-static void FormatText(const int trap = -1)
+static void FormatText(const uint_fast8_t trap = 255)
 {
 	switch (trap)
 	{
@@ -248,47 +254,48 @@ static std::string padRight(std::string str, const unsigned long long n)
 
 void PrintDamageToFile()
 {
-	static short PrintMap[LevelCount][ColumnCount][2];
+	static uint_fast16_t PrintMap[LevelCount][ColumnCount][2];
 	PopulatePrint(PrintMap);
-	for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
+	for (uint_fast8_t j = LevelCount - 1; j != UINT_FAST8_MAX; j--)
 	{
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
-			const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
-			const auto multiplier = PrintMap[j][i][1];
-			auto formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
+			const uint_fast16_t round = PrintMap[j][i][0] / PrintMap[j][i][1];
+			const uint_fast16_t multiplier = PrintMap[j][i][1];
+			const std::string formattedWord = " " + (padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padLeft(std::to_string(round) + " ", 5));
 			outputString << formattedWord;
 		}
 
 		outputString << std::endl;
 	}
 
-	const auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+	const std::string damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
 		mapIndex) + "\n\n";
 	outputString << damageOutput;
 }
 
 void PrintDamageToConsole()
 {
-	static short PrintMap[LevelCount][ColumnCount][2];
+	static uint_fast16_t PrintMap[LevelCount][ColumnCount][2];
 	PopulatePrint(PrintMap);
 
-	for (int_fast8_t j = LevelCount - 1; j >= 0; j--)
+	for (uint_fast8_t j = LevelCount - 1; j != UINT_FAST8_MAX; j--)
 	{
-		for (int_fast8_t i = 0; i < ColumnCount; i++)
+		FormatText();
+
+		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
 			FormatText(Map[j][i]);
-			const auto round = PrintMap[j][i][0] / PrintMap[j][i][1];
-			const auto multiplier = PrintMap[j][i][1];
-			auto formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
+			const uint_fast16_t round = PrintMap[j][i][0] / PrintMap[j][i][1];
+			const uint_fast16_t multiplier = PrintMap[j][i][1];
+			const std::string formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
 			std::cout << formattedWord;
 		}
-
 		FormatText();
 		std::cout << std::endl;
 	}
 
-	auto damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
+	const std::string damageOutput = "\nTotal Damage: " + std::to_string(TotalDamage) + "\nIndex:        " + std::to_string(
 		mapIndex) + "\n\n";
 	std::cout << damageOutput;
 }
@@ -299,20 +306,20 @@ int main()
 {
 	// See https://aka.ms/new-console-template for more information
 
-	int maxDamage = 0;
+	unsigned int maxDamage = 0;
 	updateDamageTable(2, 3);
 
 	for (; ; )
 	{
 		IncrementList();
 
-		short damageCountTable[11] = { 0 };
-		int freezeRounds = 0;
-		for (int_fast8_t j = 0; j < LevelCount; j++)
+		uint_fast8_t damageCountTable[11] = { 0 };
+		uint_fast16_t freezeRounds = 0;
+		for (uint_fast8_t j = 0; j < LevelCount; j++)
 		{
 			uint_fast8_t fireTraps = 0;
-			char tower = -1;
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
+			uint_fast8_t tower = 5;
+			for (uint_fast8_t i = 0; i < ColumnCount; i++)
 			{
 				switch (Map[j][i])
 				{
@@ -323,13 +330,13 @@ int main()
 					tower = i;
 				}
 			}
-			for (int_fast8_t i = 0; i < ColumnCount; i++)
+			for (uint_fast8_t i = 0; i < ColumnCount; i++)
 			{
 				switch (Map[j][i])
 				{
 				case 0:
-					++damageCountTable[(tower == -1 ? 0 : 1) + (freezeRounds ? 5 : 0)];
-					freezeRounds = std::max(freezeRounds - 1, 0);
+					++damageCountTable[(tower == 5 ? 0 : 1) + (freezeRounds ? 5 : 0)];
+					freezeRounds = --freezeRounds != UINT_FAST16_MAX ? freezeRounds : 0;
 					break;
 				case 1:
 					freezeRounds = damageTable[11];
@@ -337,12 +344,12 @@ int main()
 					break;
 				case 2:
 					++damageCountTable[fireTraps + (freezeRounds ? 5 : 0)];
-					freezeRounds = std::max(freezeRounds - 1, 0);
+					freezeRounds = --freezeRounds != UINT_FAST16_MAX ? freezeRounds : 0;
 				}
 			}
 		}
 		TotalDamage = 0;
-		for (int_fast8_t i = 0; i < 10; i++)
+		for (uint_fast8_t i = 0; i < 10; i++)
 			TotalDamage += damageTable[i] * damageCountTable[i];
 
 		if (TotalDamage > maxDamage)
