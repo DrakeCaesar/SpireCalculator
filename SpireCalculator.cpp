@@ -23,6 +23,8 @@ static uint_fast8_t Map[LevelCount][ColumnCount];
 static uint_fast8_t BestMap[LevelCount][ColumnCount];
 static std::stringstream outputString;
 
+//7915089 map index
+
 static uint_fast16_t damageTable[12]
 {
 	50,  //Base
@@ -155,15 +157,13 @@ static void CopyToMap()
 		}
 }
 
-static void IncrementList()
+static void IncrementList(uint_fast8_t carryover = 1)
 {
 	++mapIndex;
-	uint_fast8_t carryover = 1;
-
 	for (uint_fast8_t j = Locked; j < LevelCount; j++)
 	{
 		bool columnHasTower = false;
-		if (j > Offset && carryover == 1)
+		if (j > Offset && carryover >= 1)
 		{
 			if (j - Offset > Locked)
 			{
@@ -182,12 +182,12 @@ static void IncrementList()
 		for (uint_fast8_t i = 0; i < ColumnCount; i++)
 		{
 			const uint_fast8_t hadToken = Map[j][i] == 2;
-			Map[j][i] += carryover;
-			carryover = 0;
+			++Map[j][i];
+			--carryover;
 
 			if (Map[j][i] == 3)
 			{
-				carryover = 1;
+				++carryover;
 				columnHasTower = false;
 				Map[j][i] = 0;
 				towerTokens = hadToken ? ++towerTokens : --towerTokens;
@@ -210,7 +210,7 @@ static void IncrementList()
 				else if ((towerTokens == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
 				{
 					Map[j][i] = 0;
-					carryover = 1;
+					++carryover;
 				}
 			}
 			if (carryover == 0)
