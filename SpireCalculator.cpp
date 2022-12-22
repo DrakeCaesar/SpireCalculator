@@ -1,5 +1,6 @@
 // ReSharper disable CppInconsistentNaming
 // ReSharper disable CppDefaultCaseNotHandledInSwitchStatement
+// ReSharper disable CppClangTidyModernizeLoopConvert
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -10,10 +11,10 @@ unsigned int TotalDamage;
 constexpr bool output = true;
 constexpr bool debug = false;
 
-static constexpr uint_fast8_t LevelCount = 7;
+static constexpr uint_fast8_t LevelCount = 8;
 static constexpr uint_fast8_t MaxTowers = 3;
 static constexpr uint_fast8_t ColumnCount = 5;
-static constexpr uint_fast8_t Offset = 4;
+static constexpr uint_fast8_t Offset = 3;
 static uint_fast8_t towerTokens = MaxTowers;
 static unsigned int mapIndex = 0;
 static bool Exhausted = false;
@@ -43,6 +44,9 @@ void updateDamageTable(const uint_fast8_t fireTrapLevel, const uint_fast8_t fros
 	if (fireTrapLevel == 2)
 		for (uint_fast8_t i = 0; i < 10; i++)
 			damageTable[i] *= 10;
+	if (fireTrapLevel == 3)
+		for (uint_fast8_t i = 0; i < 10; i++)
+			damageTable[i] *= 10 * 5;
 
 	if (frostTrapLevel == 3)
 		for (uint_fast8_t i = 5; i < 10; i++)
@@ -288,7 +292,7 @@ void PrintDamageToConsole()
 			FormatText(Map[j][i]);
 			const uint_fast16_t round = PrintMap[j][i][0] / PrintMap[j][i][1];
 			const uint_fast16_t multiplier = PrintMap[j][i][1];
-			const std::string formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 5);
+			const std::string formattedWord = " " + padRight(multiplier > 1 ? std::to_string(multiplier) + "x" : "", 3) + padRight(std::to_string(round) + " ", 6);
 			std::cout << formattedWord;
 		}
 		FormatText();
@@ -307,7 +311,7 @@ int main()
 	// See https://aka.ms/new-console-template for more information
 
 	unsigned int maxDamage = 0;
-	updateDamageTable(2, 3);
+	updateDamageTable(3, 3);
 
 	for (; ; )
 	{
@@ -389,6 +393,7 @@ int main()
 			if (expectedOutput != actualOutput)
 			{
 				std::cout << "Output has changed.\n";
+				// ReSharper disable once CppExpressionWithoutSideEffects
 				std::cin;  // NOLINT(clang-diagnostic-unused-value)
 				return 1;
 			}
