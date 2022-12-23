@@ -15,16 +15,19 @@ static constexpr uint_fast8_t LevelCount = 8;
 static constexpr uint_fast8_t MaxTowers = 3;
 static constexpr uint_fast8_t ColumnCount = 5;
 static constexpr uint_fast8_t Offset = 3;
-static uint_fast8_t towerTokens = MaxTowers;
+static constexpr uint_fast8_t Threads = 8;
 static unsigned int mapIndex = 0;
 static bool Exhausted = false;
+static bool LockedSwitch = false;
 static uint_fast8_t Locked = 0;
 static uint_fast8_t MapArray[8][LevelCount][ColumnCount];
+static uint_fast8_t TowerArray[8];
 static uint_fast8_t BestMap[LevelCount][ColumnCount];
 static std::stringstream outputString;
 
 //7915089 map index
-
+//New: Total iterations: 79691916
+//Old: Total iterations : 9961472
 static uint_fast16_t damageTable[12]
 {
 	50,  //Base
@@ -144,21 +147,31 @@ static void CopyToBestMap(uint_fast8_t Map[LevelCount][ColumnCount])
 //	return true;
 //}
 
-static void CopyToMap(uint_fast8_t Map[LevelCount][ColumnCount])
+static void CopyToMap()
 {
-	towerTokens = MaxTowers;
-	for (uint_fast8_t j = 0; j < LevelCount; j++)
-		for (uint_fast8_t i = 0; i < ColumnCount; i++)
-		{
-			if (j < Locked)
-				Map[j][i] = BestMap[j][i];
-			if (Map[j][i] == 2)
-				--towerTokens;
-		}
+	for (uint_fast8_t k = 0; k < Threads; k++) {
+
+		TowerArray[k] = MaxTowers;
+		for (uint_fast8_t j = 0; j < LevelCount; j++)
+			for (uint_fast8_t i = 0; i < ColumnCount; i++)
+			{
+				if (j < Locked)
+				{
+					MapArray[k][j][i] = BestMap[j][i];
+					if (MapArray[k][j][i] == 2)
+						--TowerArray[k];
+				} else
+				{
+					MapArray[k][j][i] = 0;
+				}
+			}
+	}
 }
 
-static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_t carryover = 1)
+static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_t* towerTokens, uint_fast8_t carryover)
 {
+	if (carryover == 0)
+		return;
 	++mapIndex;
 	for (uint_fast8_t j = Locked; j < LevelCount; j++)
 	{
@@ -167,9 +180,7 @@ static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_
 		{
 			if (j - Offset > Locked)
 			{
-
-				Locked = j - Offset;
-				CopyToMap(Map);
+				LockedSwitch = true;
 				return;
 			}
 		}
@@ -190,7 +201,7 @@ static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_
 				++carryover;
 				columnHasTower = false;
 				Map[j][i] = 0;
-				towerTokens = hadToken ? ++towerTokens : --towerTokens;
+				(*towerTokens) = hadToken ? ++(*towerTokens) : --(*towerTokens);
 			}
 			else if
 				(Map[j][i] == 1 &&
@@ -202,12 +213,12 @@ static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_
 			if (Map[j][i] == 2)
 			{
 				const bool optimalTowerPlacement = (i == 0 || Map[j][i - 1] != 0) && j % 2 == 1;
-				if (towerTokens > 0 && columnHasTower == false && optimalTowerPlacement)
+				if ((*towerTokens) > 0 && columnHasTower == false && optimalTowerPlacement)
 				{
-					--towerTokens;
+					--(*towerTokens);
 					columnHasTower = true;
 				}
-				else if ((towerTokens == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
+				else if (((*towerTokens) == 0 || columnHasTower || !optimalTowerPlacement) && hadToken == false)
 				{
 					Map[j][i] = 0;
 					++carryover;
@@ -354,55 +365,93 @@ int main()
 
 	unsigned int maxDamage = 0;
 	updateDamageTable(3, 3);
+	std::fill_n(TowerArray, Threads, MaxTowers);
 
-	for (; ; )
+	for (uint_fast8_t i = 0; i < Threads; i++)
 	{
-		IncrementList(MapArray[0]);
-
-		Populate(MapArray[0]);
-
-		if (TotalDamage > maxDamage)
+		for (uint_fast8_t j = 0; j < i; j++)
 		{
-			CopyToBestMap(MapArray[0]);
-			maxDamage = TotalDamage;
-			if (output)
-				PrintDamageToConsole(MapArray[0]);
+			IncrementList(MapArray[i], &TowerArray[i], 1);
+
 		}
+	}
 
-		if (debug)
+	for (; ; ){
+	
+		for (uint_fast8_t i = 0; i < Threads; i++)
 		{
-			//spire.PrintDamageToFile();
-			//if (Spire._mapIndex % 1000 == 0)
-			//{
-			//    Console.WriteLine(Spire._mapIndex);
-			//}
-		}
-
-		if (Exhausted)
-		{
-			//Console.ReadLine();
-			std::cout <<"Total iterations: " << mapIndex;
-
-			if (!debug)
-				return 0;
-
-			const std::string actualOutput = outputString.str();
-			std::ofstream ofFile("output.txt");
-			ofFile << actualOutput;
-
-
-			std::ifstream inFile("expectedOutput.txt");
-			const std::string expectedOutput((std::istreambuf_iterator<char>(inFile)),
-				(std::istreambuf_iterator<char>()));
-
-			if (expectedOutput != actualOutput)
+			Populate(MapArray[i]);
+			if (TotalDamage > maxDamage)
 			{
-				std::cout << "Output has changed.\n";
-				// ReSharper disable once CppExpressionWithoutSideEffects
-				std::cin;  // NOLINT(clang-diagnostic-unused-value)
-				return 1;
+				CopyToBestMap(MapArray[i]);
+				maxDamage = TotalDamage;
+				if (output)
+					PrintDamageToConsole(MapArray[i]);
 			}
-			return 0;
+
+			if (debug)
+			{
+				//spire.PrintDamageToFile();
+				//if (Spire._mapIndex % 1000 == 0)
+				//{
+				//    Console.WriteLine(Spire._mapIndex);
+				//}
+			}
+
+			if (Exhausted)
+			{
+				//Console.ReadLine();
+				std::cout << "Total iterations: " << mapIndex;
+
+				if (!debug)
+					return 0;
+
+				const std::string actualOutput = outputString.str();
+				std::ofstream ofFile("output.txt");
+				ofFile << actualOutput;
+
+
+				std::ifstream inFile("expectedOutput.txt");
+				const std::string expectedOutput((std::istreambuf_iterator<char>(inFile)),
+					(std::istreambuf_iterator<char>()));
+
+				if (expectedOutput != actualOutput)
+				{
+					std::cout << "Output has changed.\n";
+					// ReSharper disable once CppExpressionWithoutSideEffects
+					std::cin;  // NOLINT(clang-diagnostic-unused-value)
+					return 1;
+				}
+				return 0;
+			}
+
+
+			//IncrementList(MapArray[i], &TowerArray[i], Threads);
 		}
+		if (LockedSwitch)
+		{
+			++Locked;
+			LockedSwitch = false;
+			CopyToMap();
+			for (uint_fast8_t i = 0; i < Threads; i++)
+			{
+				for (uint_fast8_t j = 0; j < i; j++)
+				{
+					IncrementList(MapArray[i], &TowerArray[i], 1);
+
+				}
+			}
+
+		}else
+		{
+			for (uint_fast8_t i = 0; i < Threads; i++)
+				for (uint_fast8_t j = 0; j < Threads; j++)
+				{
+					IncrementList(MapArray[i], &TowerArray[i], 1);
+				}
+		}
+
+
+
 	}
 }
