@@ -5,8 +5,14 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <thread>
+#include <mutex>
+#include <chrono>
 
-unsigned int TotalDamage;
+std::mutex mtx;
+
+
+unsigned int maxDamage = 0;
 
 constexpr bool output = true;
 constexpr bool debug = false;
@@ -14,7 +20,7 @@ constexpr bool debug = false;
 static constexpr uint_fast8_t LevelCount = 8;
 static constexpr uint_fast8_t MaxTowers = 3;
 static constexpr uint_fast8_t ColumnCount = 5;
-static constexpr uint_fast8_t Offset = 3;
+static constexpr uint_fast8_t Offset = 4;
 static constexpr uint_fast8_t Threads = 8;
 static unsigned int mapIndex = 0;
 static bool Exhausted = false;
@@ -267,7 +273,7 @@ static std::string padRight(std::string str, const unsigned long long n)
 	return str;
 }
 
-void PrintDamageToFile(uint_fast8_t Map[LevelCount][ColumnCount])
+void PrintDamageToFile(uint_fast8_t Map[LevelCount][ColumnCount], int TotalDamage)
 {
 	static uint_fast16_t PrintMap[LevelCount][ColumnCount][2];
 	PopulatePrint(Map, PrintMap);
@@ -289,7 +295,7 @@ void PrintDamageToFile(uint_fast8_t Map[LevelCount][ColumnCount])
 	outputString << damageOutput;
 }
 
-void PrintDamageToConsole(uint_fast8_t Map[LevelCount][ColumnCount])
+void PrintDamageToConsole(uint_fast8_t Map[LevelCount][ColumnCount], const unsigned int TotalDamage)
 {
 	static uint_fast16_t PrintMap[LevelCount][ColumnCount][2];
 	PopulatePrint(Map, PrintMap);
@@ -315,7 +321,7 @@ void PrintDamageToConsole(uint_fast8_t Map[LevelCount][ColumnCount])
 	std::cout << damageOutput;
 }
 
-void Populate(uint_fast8_t Map[LevelCount][ColumnCount])
+int Populate(uint_fast8_t Map[LevelCount][ColumnCount])
 {
 	uint_fast8_t damageCountTable[11] = { 0 };
 	uint_fast16_t freezeRounds = 0;
@@ -352,18 +358,44 @@ void Populate(uint_fast8_t Map[LevelCount][ColumnCount])
 			}
 		}
 	}
-	TotalDamage = 0;
+	int TotalDamage = 0;
 	for (uint_fast8_t i = 0; i < 10; i++)
 		TotalDamage += damageTable[i] * damageCountTable[i];
+	return TotalDamage;
+}
+
+// A dummy function
+void foo(const int i)
+{
+	for (;;) {
+		const unsigned int TotalDamage = Populate(MapArray[i]);
+		if (TotalDamage > maxDamage)
+		{
+			mtx.lock();
+			if (TotalDamage > maxDamage) {
+				CopyToBestMap(MapArray[i]);
+				maxDamage = TotalDamage;
+				if (output)
+					PrintDamageToConsole(MapArray[i], TotalDamage);
+			}
+			mtx.unlock();
+		}
+		if (LockedSwitch || Exhausted)
+			return;
+		for (uint_fast8_t j = 0; j < Threads; j++)
+			IncrementList(MapArray[i], &TowerArray[i], 1);
+	}
 }
 
 
 
 int main()
 {
+	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+	std::thread threads[Threads];
 	// See https://aka.ms/new-console-template for more information
 
-	unsigned int maxDamage = 0;
 	updateDamageTable(3, 3);
 	std::fill_n(TowerArray, Threads, MaxTowers);
 
@@ -379,56 +411,49 @@ int main()
 	
 		for (uint_fast8_t i = 0; i < Threads; i++)
 		{
-			Populate(MapArray[i]);
-			if (TotalDamage > maxDamage)
-			{
-				CopyToBestMap(MapArray[i]);
-				maxDamage = TotalDamage;
-				if (output)
-					PrintDamageToConsole(MapArray[i]);
-			}
-			for (uint_fast8_t j = 0; j < Threads; j++)
-				IncrementList(MapArray[i], &TowerArray[i], 1);
-
-			if (debug)
-			{
-				//spire.PrintDamageToFile();
-				//if (Spire._mapIndex % 1000 == 0)
-				//{
-				//    Console.WriteLine(Spire._mapIndex);
-				//}
-			}
-
-			if (Exhausted)
-			{
-				//Console.ReadLine();
-				std::cout << "Total iterations: " << mapIndex;
-
-				if (!debug)
-					return 0;
-
-				const std::string actualOutput = outputString.str();
-				std::ofstream ofFile("output.txt");
-				ofFile << actualOutput;
-
-
-				std::ifstream inFile("expectedOutput.txt");
-				const std::string expectedOutput((std::istreambuf_iterator<char>(inFile)),
-					(std::istreambuf_iterator<char>()));
-
-				if (expectedOutput != actualOutput)
-				{
-					std::cout << "Output has changed.\n";
-					// ReSharper disable once CppExpressionWithoutSideEffects
-					std::cin;  // NOLINT(clang-diagnostic-unused-value)
-					return 1;
-				}
-				return 0;
-			}
-
-
-			//IncrementList(MapArray[i], &TowerArray[i], Threads);
+			threads[i] = std::thread(foo, i);
 		}
+
+		for (; ; ) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			if (LockedSwitch || Exhausted)
+				break;
+		}
+		for (uint_fast8_t i = 0; i < Threads; i++)
+		{
+			threads[i].join();
+		}
+
+		if (Exhausted)
+		{
+			//Console.ReadLine();
+			std::cout << "Total iterations: " << mapIndex << std::endl;
+			std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+			std::cout << "Elapsed time:     " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << " seconds" << std::endl;
+
+
+			if (!debug)
+				return 0;
+
+			const std::string actualOutput = outputString.str();
+			std::ofstream ofFile("output.txt");
+			ofFile << actualOutput;
+
+
+			std::ifstream inFile("expectedOutput.txt");
+			const std::string expectedOutput((std::istreambuf_iterator<char>(inFile)),
+				(std::istreambuf_iterator<char>()));
+
+			if (expectedOutput != actualOutput)
+			{
+				std::cout << "Output has changed.\n";
+				// ReSharper disable once CppExpressionWithoutSideEffects
+				std::cin;  // NOLINT(clang-diagnostic-unused-value)
+				return 1;
+			}
+			return 0;
+		}
+
 		if (LockedSwitch)
 		{
 			++Locked;
