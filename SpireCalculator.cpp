@@ -168,7 +168,7 @@ static void CopyToMap()
 	}
 }
 
-static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_t* towerTokens, uint_fast8_t carryover)
+static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_t* towerTokens, uint_fast8_t carryover, bool locking = true)
 {
 	if (carryover == 0)
 		return;
@@ -178,7 +178,7 @@ static void IncrementList(uint_fast8_t Map[LevelCount][ColumnCount], uint_fast8_
 		bool columnHasTower = false;
 		if (j > Offset && carryover >= 1)
 		{
-			if (j - Offset > Locked)
+			if (j - Offset > Locked && locking)
 			{
 				LockedSwitch = true;
 				return;
@@ -372,7 +372,6 @@ int main()
 		for (uint_fast8_t j = 0; j < i; j++)
 		{
 			IncrementList(MapArray[i], &TowerArray[i], 1);
-
 		}
 	}
 
@@ -388,6 +387,8 @@ int main()
 				if (output)
 					PrintDamageToConsole(MapArray[i]);
 			}
+			for (uint_fast8_t j = 0; j < Threads; j++)
+				IncrementList(MapArray[i], &TowerArray[i], 1);
 
 			if (debug)
 			{
@@ -442,16 +443,6 @@ int main()
 				}
 			}
 
-		}else
-		{
-			for (uint_fast8_t i = 0; i < Threads; i++)
-				for (uint_fast8_t j = 0; j < Threads; j++)
-				{
-					IncrementList(MapArray[i], &TowerArray[i], 1);
-				}
 		}
-
-
-
 	}
 }
